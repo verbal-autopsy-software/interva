@@ -29,7 +29,11 @@ setup(
     },
     install_requires=[
         "pandas",
+        "vacheck",
         ],
+    dependency_links=[
+        "git+https://github.com/verbal-autopsy-software/vacheck@0.0.1#egg=vacheck"
+    ],
     classifiers=[
         "Programming Language :: Python :: 3",
         "Programming Language :: Python :: 3.7",
