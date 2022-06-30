@@ -34,6 +34,7 @@ def test_run_incorrect_sci_shape(example_va_data):
     probbase = read_excel(probbase_xls)
     probbaseV5 = probbase.to_numpy()
     probbaseV5 = delete(probbaseV5, 0, axis=0)
+    probbaseV5 = delete(probbaseV5, 0, axis=0)
     iv5out = InterVA5(va_data, hiv="h", malaria="l", write=False, directory="VA test", filename="VA5_result", output="extended", append=False, sci=probbaseV5)
     with pytest.raises(IOError):
         iv5out.run()
