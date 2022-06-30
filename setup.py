@@ -29,6 +29,7 @@ setup(
     },
     install_requires=[
         "pandas",
+        "numpy",
         "vacheck",
         ],
     dependency_links=[
