@@ -2,7 +2,6 @@
 
 import pytest
 from pandas import read_csv, DataFrame, Series, read_excel
-from numpy import delete
 from pkgutil import get_data
 from io import BytesIO
 
@@ -33,8 +32,8 @@ def test_run_incorrect_sci_shape(example_va_data):
     probbase_xls = get_data("interva", "data/probbase.xls")
     probbase = read_excel(probbase_xls)
     probbaseV5 = probbase.to_numpy()
-    probbaseV5 = delete(probbaseV5, 0, axis=0)
-    probbaseV5 = delete(probbaseV5, 0, axis=0)
+    probbase.drop([probbase.index[0]], inplace=True)
+    probbase.drop([probbase.index[0]], inplace=True)
     iv5out = InterVA5(va_data, hiv="h", malaria="l", write=False, directory="VA test", filename="VA5_result", output="extended", append=False, sci=probbaseV5)
     with pytest.raises(IOError):
         iv5out.run()
@@ -71,25 +70,22 @@ def test_run_correct_VA5_output(example_va_data, example_va_ids):
     iv5out = InterVA5(va_data, hiv="h", malaria="l", write=False, directory="VA test", filename="VA5_result", output="extended", append=False, return_checked_data=True)
     run_output = iv5out.run()
     va5_output = run_output["VA5"]
-    # va5_output.columns = ["ID", "MALPREV", "HIVPREV", "PREGSTAT", "PREGLIK", 
-    #                      "CAUSE1", "LIK1", "CAUSE2", "LIK2", "CAUSE3", "LIK3", 
-    #                      "INDET", "COMCAT", "COMNUM", "WHOLEPROB"]
     assert isinstance(va5_output, DataFrame)
     assert (va5_output.loc[:, "ID"] == example_va_ids).all()
     assert (va5_output.loc[:, "MALPREV"] == "l").all()
     assert (va5_output.loc[:, "HIVPREV"] == "h").all()
     preg_stat_valid_values = ["n/a", "indeterminate", "Not pregnant or recently delivered", "Pregnancy ended within 6 weeks of death", "Pregnant at death"]
     assert (va5_output.loc[:, "PREGSTAT"].isin(preg_stat_valid_values)).all()
-    cause_valid_values = [x for x in iv5out.causetextV5.iloc[3:64, 1]]
+    cause_valid_values = [x for x in iv5out.causetextV5.iloc[3:64, 0]]
     cause_valid_values.append(" ")
     assert (va5_output.loc[:, "CAUSE1"].isin(cause_valid_values)).all()
     assert (va5_output.loc[:, "CAUSE2"].isin(cause_valid_values)).all()
     assert (va5_output.loc[:, "CAUSE3"].isin(cause_valid_values)).all()
     assert (va5_output.loc[:, "INDET"] <= 100).all()
-    comcat_valid_values = [x for x in iv5out.causetextV5.iloc[64:70, 1]]
+    comcat_valid_values = [x for x in iv5out.causetextV5.iloc[64:70, 0]]
     comcat_valid_values.append("Multiple")
     assert (va5_output.loc[:, "COMCAT"].isin(comcat_valid_values)).all()
-    assert (va5_output.loc[0, "WHOLEPROB"].index == iv5out.causetextV5.iloc[:, 1]).all()
+    assert (va5_output.columns[14:84] == iv5out.causetextV5.iloc[:, 0]).all()
 
 def test_run_correct_malaria_output(example_va_data):
     va_data = example_va_data

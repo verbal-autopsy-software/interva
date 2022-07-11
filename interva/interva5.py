@@ -7,12 +7,14 @@ interva.interva5
 This module contains the class for the InterVA5 algorithm.
 """
 
+from unittest import result
 from pandas import (DataFrame, Series, read_csv, read_excel, to_numeric, isna)
-from numpy import (full, ndarray, nan, nansum, array, amax, argmax, delete, 
-                   hstack, savetxt, zeros)
+from numpy import (ndarray, nan, nansum, nanmax, array, amax, argmax, delete, 
+                   concatenate, divide, sum, where)
 from os import path, chdir, getcwd, mkdir
 from logging import basicConfig, info, warning
 from csv import writer
+from time import time
 from pkgutil import get_data
 from io import BytesIO
 
@@ -107,28 +109,29 @@ class InterVA5:
                     cause1, lik1, cause2, lik2, cause3, lik3, indet, 
                     str(comcat), comnum, wholeprob]
                     
-        def save_va5(x: ndarray, filename: str, write: bool):
+        def save_va5(x: list, filename: str, write: bool):
             if not write:
                 return()
-            x = delete(x, 14)
-            filename = filename + '.csv'
-            with open(filename, 'a') as csvfile:
-                savetxt(csvfile, x, delimiter=",", fmt="%f", header="")
-        
-        def save_va5_prob(x: ndarray, filename: str, write: bool):
-            if not write:
-                return()
-            prob = x[14]
-            x = delete(x, 14)
+            del x[14]
             filename = filename + ".csv"
-            x = hstack(x, prob).squeeze()
-            with open(filename, 'a') as csvfile:
-                savetxt(csvfile, x, delimiter=",", fmt="%f", header="")
+            with open(filename, 'a', newline="") as csvfile:
+                csv_writer = writer(csvfile)
+                csv_writer.writerow(x)
         
-        if self.directory is None and self.write:
-            raise IOError \
-                ("error: please provide a directory (required when write = True)")
-        if self.directory is None:
+        def save_va5_prob(x: list, filename: str, write: bool):
+            if not write:
+                return()
+            prob = x.pop(14)
+            x = array(x)
+            filename = filename + ".csv"
+            x = concatenate((x, prob))
+            with open(filename, 'a', newline="") as csvfile:
+                csv_writer = writer(csvfile)
+                csv_writer.writerow(x)
+        
+        if not self.directory and self.write:
+            raise IOError("error: please provide a directory (required when write = True)")
+        if not self.directory:
             self.directory = getcwd()
         if not path.isdir(self.directory):
             mkdir(self.directory)
@@ -139,9 +142,8 @@ class InterVA5:
         if self.sci is None:
             probbase_xls = get_data("interva", "data/probbase.xls")
             probbase = read_excel(probbase_xls)
+            probbase.drop([probbase.index[0]], inplace=True)
             probbaseV5 = probbase.to_numpy()
-            probbaseV5 = delete(probbaseV5, 0, axis=0)
-            self.probbaseV5Version = probbaseV5[0, 2]
         if self.sci is not None:
             validSCI = True
             if not isinstance(self.sci, DataFrame) and \
@@ -156,16 +158,21 @@ class InterVA5:
             if isinstance(self.sci, DataFrame):
                 self.sci = self.sci.to_numpy()
             probbaseV5 = self.sci
-            self.probbaseV5Version = probbaseV5[0, 2]
-        print("Using Probbase version:", self.probbaseV5Version, sep=" ")
+        self.probbaseV5Version = probbaseV5[0, 2]
+        print(f"Using Probbase version: {self.probbaseV5Version}")
         causetextV5_horizontal = DataFrame(CAUSETEXTV5)
         self.causetextV5 = causetextV5_horizontal.transpose()
         if self.groupcode:
-            self.causetextV5.drop(self.causetextV5.columns[0], axis=1)
+            # adding groupcode to cause
+            for i in range(3, 64):
+                cause = self.causetextV5.iloc[i, 0]
+                code = self.causetextV5.iloc[i, 1]
+                self.causetextV5.iloc[i, 1] = code + " " + cause
+            self.causetextV5.drop(self.causetextV5.columns[0], axis=1, inplace=True)
         else:
-            self.causetextV5.drop(self.causetextV5.columns[1], axis=1)
+            self.causetextV5.drop(self.causetextV5.columns[1], axis=1, inplace=True)
         if self.write:
-            info("Error & warning log built for InterVA5")
+            info("Error & warning log built for InterVA5 %f \n", time())
         if isinstance(self.va_input, str) and self.va_input[-4:] == ".csv":
             self.va_input = read_csv(self.va_input)
         if "i183o" in self.va_input.columns:
@@ -203,23 +210,24 @@ class InterVA5:
                     "If the change is undesirable, please change in the input " +
                     "to match standard InterVA5 input format.")
             va_input_names = valabels
-        prob_ncols = probbaseV5.shape[1]
-        probbaseV5[:,17:prob_ncols][probbaseV5[:,17:prob_ncols] == "I"] = 1
-        probbaseV5[:,17:prob_ncols][probbaseV5[:,17:prob_ncols] == "A+"] = 0.8
-        probbaseV5[:,17:prob_ncols][probbaseV5[:,17:prob_ncols] == "A"] = 0.5
-        probbaseV5[:,17:prob_ncols][probbaseV5[:,17:prob_ncols] == "A-"] = 0.2
-        probbaseV5[:,17:prob_ncols][probbaseV5[:,17:prob_ncols] == "B+"] = 0.1
-        probbaseV5[:,17:prob_ncols][probbaseV5[:,17:prob_ncols] == "B"] = 0.05
-        probbaseV5[:,17:prob_ncols][probbaseV5[:,17:prob_ncols] == "B-"] = 0.02
-        probbaseV5[:,17:prob_ncols][probbaseV5[:,17:prob_ncols] == "C+"] = 0.01
-        probbaseV5[:,17:prob_ncols][probbaseV5[:,17:prob_ncols] == "C"] = 0.005
-        probbaseV5[:,17:prob_ncols][probbaseV5[:,17:prob_ncols] == "C-"] = 0.002
-        probbaseV5[:,17:prob_ncols][probbaseV5[:,17:prob_ncols] == "D+"] = 0.001
-        probbaseV5[:,17:prob_ncols][probbaseV5[:,17:prob_ncols] == "D"] = 5e-04
-        probbaseV5[:,17:prob_ncols][probbaseV5[:,17:prob_ncols] == "D-"] = 1e-04
-        probbaseV5[:,17:prob_ncols][probbaseV5[:,17:prob_ncols] == "E"] = 1e-05
-        probbaseV5[:,17:prob_ncols][probbaseV5[:,17:prob_ncols] == "N"] = 0
-        probbaseV5[:,17:prob_ncols][probbaseV5[:,17:prob_ncols] == ""] = 0
+        prob_ncol = probbaseV5.shape[1]
+        probbaseV5[:,17:prob_ncol][probbaseV5[:,17:prob_ncol] == "I"] = 1
+        probbaseV5[:,17:prob_ncol][probbaseV5[:,17:prob_ncol] == "A+"] = 0.8
+        probbaseV5[:,17:prob_ncol][probbaseV5[:,17:prob_ncol] == "A"] = 0.5
+        probbaseV5[:,17:prob_ncol][probbaseV5[:,17:prob_ncol] == "A-"] = 0.2
+        probbaseV5[:,17:prob_ncol][probbaseV5[:,17:prob_ncol] == "B+"] = 0.1
+        probbaseV5[:,17:prob_ncol][probbaseV5[:,17:prob_ncol] == "B"] = 0.05
+        probbaseV5[:,17:prob_ncol][probbaseV5[:,17:prob_ncol] == "B-"] = 0.02
+        probbaseV5[:,17:prob_ncol][probbaseV5[:,17:prob_ncol] == "B -"] = 0.02
+        probbaseV5[:,17:prob_ncol][probbaseV5[:,17:prob_ncol] == "C+"] = 0.01
+        probbaseV5[:,17:prob_ncol][probbaseV5[:,17:prob_ncol] == "C"] = 0.005
+        probbaseV5[:,17:prob_ncol][probbaseV5[:,17:prob_ncol] == "C-"] = 0.002
+        probbaseV5[:,17:prob_ncol][probbaseV5[:,17:prob_ncol] == "D+"] = 0.001
+        probbaseV5[:,17:prob_ncol][probbaseV5[:,17:prob_ncol] == "D"] = 5e-04
+        probbaseV5[:,17:prob_ncol][probbaseV5[:,17:prob_ncol] == "D-"] = 1e-04
+        probbaseV5[:,17:prob_ncol][probbaseV5[:,17:prob_ncol] == "E"] = 1e-05
+        probbaseV5[:,17:prob_ncol][probbaseV5[:,17:prob_ncol] == "N"] = 0
+        probbaseV5[:,17:prob_ncol][probbaseV5[:,17:prob_ncol] == ""] = 0
         probbaseV5[0, 0:17] = 0
         Sys_Prior = to_numeric(probbaseV5[0, :])
         D = len(Sys_Prior)
@@ -244,40 +252,39 @@ class InterVA5:
             Sys_Prior[24] = 1e-05
             Sys_Prior[44] = 1e-05
             
-        ID_list = []
+        ID_list = [nan for _ in range(N)]
         VA_result = [[] for _ in range(N)]
         if self.write and not self.append:
             header = ["ID", "MALPREV", "HIVPREV", "PREGSTAT", "PREGLIK", 
-                      "CAUSE1", "LIK1", "CAUSE2", "LIK2", "CAUSE3", "LIK3", 
-                      "INDET", "COMCAT", "COMNUM"]
+                            "CAUSE1", "LIK1", "CAUSE2", "LIK2", "CAUSE3", "LIK3", 
+                            "INDET", "COMCAT", "COMNUM"]
             if self.output == "extended":
-                header = header.append(self.causetextV5.iloc[:, 1])
-                with open(self.filename + ".csv", 'a+', newline='') as write_obj:
-                    csv_writer = writer(write_obj)
-                    csv_writer.writerow(header)
+                header = header + list(self.causetextV5.iloc[:, 0])
+            with open(self.filename + ".csv", 'w', newline="") as write_obj:
+                csv_writer = writer(write_obj)
+                csv_writer.writerow(header)
         nd = max(1, round(N/100))
         np = max(1, round(N/10))
         
         if self.write:  
-            info("\n\nthe following records are incomplete and " +
-                "excluded from further processing:\n\n")
+            info("\n\n the following records are incomplete and " +
+                "excluded from further processing: \n\n")
             
         first_pass = []
         second_pass = []
-        errors = None
+        errors = ""
         if self.return_checked_data:
             self.checked_data = [[] for _ in range(N)]
+            # id_inputs declared & assigned above
         for i in range(N):
             k = i + 1
             if k % nd == 0:
                 print(".", end="")
             if k % np == 0:
-                percentage = round(k/N * 100)
-                print(percentage, "% completed", sep="")
+                print(round(k/N * 100), "% completed", sep="")
             if k == N:
                 print("100% completed")
-            index_current = str(va_data[i, 0])
-            index_current = id_inputs[i]
+            index_current = str(id_inputs[i])
             va_data[i, :][va_data[i, :] == "n"] = "0"
             va_data[i, :][va_data[i, :] == "N"] = "0"
             va_data[i, :][va_data[i, :] == "y"] = "1"
@@ -285,10 +292,10 @@ class InterVA5:
             for j in range(va_data.shape[1]):
                 if va_data[i, j] != "0" and va_data[i, j] != "1":
                     va_data[i, j] = nan
+
             input_current = va_data[i, :]
             input_current[:][input_current[:] == "0"] = 0
             input_current[:][input_current[:] == "1"] = 1
-            to_numeric(input_current[:])
             
             input_current[0] = 0
             if nansum(input_current[5:12]) < 1:
@@ -310,20 +317,17 @@ class InterVA5:
             input_current = Series(input_current, index=va_input_names)
             tmp = datacheck5(va_input=input_current, va_id=index_current)
             if self.return_checked_data:
-                current_checked = [[id_inputs[i]]]
-                current_checked.append(list(tmp["output"][1:S]))
-                current_checked = \
-                    [item for sublist in current_checked for item in sublist]
-                self.checked_data[i] = current_checked
+                self.checked_data[i] = [id_inputs[i]] + list(tmp["output"][1:S])
+            
             input_current = tmp["output"]
             first_pass.append(tmp["first_pass"])
             second_pass.append(tmp["second_pass"])
             
-            subst_vector = full(S, nan)
+            subst_vector = array([nan for _ in range(S)])
             subst_vector[probbaseV5[:, 5] == "N"] = 0
             subst_vector[probbaseV5[:, 5] == "Y"] = 1
             
-            new_input = zeros(S, dtype=int)
+            new_input = array([0 for _ in range(S)])
             for y in range(1,S):
                 if not isna(input_current[y]):
                     if input_current[y] == subst_vector[y]:
@@ -335,104 +339,111 @@ class InterVA5:
             reproductiveAge = 0
             preg_state = " "
             lik_preg = " "
-            if input_current[4] == 1 and \
-                (input_current[16] == 1 or input_current[17:19].any() == 1):
+            if input_current[4] == 1 and (input_current[16:19].any() == 1):
                 reproductiveAge = 1
-            prob = Sys_Prior[17:D]
-            input_len = len(input_current)
-            temp = new_input[1:input_len][new_input[1:input_len] == 1]
-            for temp_sub in temp:
+            # prob = Sys_Prior[17:D]
+            prob = to_numeric(probbaseV5[0, 17:D])
+            if self.hiv == "h":
+                prob[22] = 0.05
+            if self.hiv == "l":
+                prob[22] = 0.005
+            if self.hiv == "v":
+                prob[22] = 1e-05
+            if self.malaria == "h":
+                prob[24] = 0.05
+                prob[44] = 0.05
+            if self.malaria == "l":
+                prob[24] = 0.005
+                prob[44] = 1e-05
+            if self.malaria == "v":
+                prob[24] = 1e-05
+                prob[44] = 1e-05
+            with open("output.csv", 'a', newline="") as csvfile:
+                csv_writer = writer(csvfile)
+                csv_writer.writerow(prob)
+            temp = where(new_input[1:len(input_current)] == 1)[0]
+            for jj in range(len(temp)):
+                temp_sub = temp[jj]
                 for j in range(17, D):
-                    prob[j-17] = prob[j-17] * \
-                        to_numeric(probbaseV5[temp_sub + 1, j])
-                temp_sum = sum(prob[0:3])
-                temp_sum_ndarray = array(temp_sum)
-                if temp_sum > 0:
-                    prob[0:3] = prob[0:3] / temp_sum_ndarray
-                temp_sum = sum(prob[3:64])
-                temp_sum_ndarray = array(temp_sum)
-                if temp_sum > 0:
-                    prob[3:64] = prob[3:64] / temp_sum_ndarray
-                temp_sum = sum(prob[64:70])
-                temp_sum_ndarray = array(temp_sum)   
-                if temp_sum > 0:
-                    prob[64:70] = prob[64:70] / temp_sum_ndarray
-            prob_names = self.causetextV5.iloc[:, 1]
+                    prob[j-17] = prob[j-17] * probbaseV5[temp_sub + 1, j]
+                if nansum(prob[0:3]) > 0:
+                    prob[0:3] = prob[0:3] / nansum(prob[0:3])
+                if nansum(prob[3:64]) > 0:
+                    prob[3:64] = prob[3:64] / nansum(prob[3:64])
+                if nansum(prob[64:70]) > 0:
+                    prob[64:70] = prob[64:70] / nansum(prob[64:70])
+            prob_names = self.causetextV5.iloc[:, 0]
             prob_A = prob[0:3]
             prob_B = prob[3:64]
             prob_C = prob[64:70]
             
             # Determine Preg_State and Likelihood
-            prob_A_sum = sum(prob_A)
-            if prob_A_sum == 0 or reproductiveAge == 0:
+            if nansum(prob_A) == 0 or reproductiveAge == 0:
                 preg_state = "n/a"
                 lik_preg = " "
-            if max(prob_A) < 0.1 and reproductiveAge == 1:
+            if nanmax(prob_A) < 0.1 and reproductiveAge == 1:
                 preg_state = "indeterminate"
                 lik_preg = " "
-            prob_A_max_loc = argmax(prob_A)
-            if prob_A_max_loc == 0 and prob_A[0] >= 0.1 and reproductiveAge == 1:
+            if where(prob_A == nanmax(prob_A))[0][0] == 0 and prob_A[0] >= 0.1 and reproductiveAge == 1:
                 preg_state = "Not pregnant or recently delivered"
-                lik_preg = int(round(prob_A[1] / prob_A_sum * 100))
-            if prob_A_max_loc == 1 and prob_A[1] >= 0.1 and reproductiveAge == 1:
+                lik_preg = round(prob_A[0]/nansum(prob_A) * 100)
+            if where(prob_A == nanmax(prob_A))[0][0] == 1 and prob_A[1] >= 0.1 and reproductiveAge == 1:
                 preg_state = "Pregnancy ended within 6 weeks of death"
-                lik_preg = int(round(prob_A[1] / prob_A_sum * 100))
-            if prob_A_max_loc == 2 and prob_A[2] >= 0.1 and reproductiveAge == 1:
+                lik_preg = round(prob_A[1]/nansum(prob_A) * 100)
+            if where(prob_A == nanmax(prob_A))[0][0] == 2 and prob_A[2] >= 0.1 and reproductiveAge == 1:
                 preg_state = "Pregnant at death"
-                lik_preg = int(round(prob_A[2] / prob_A_sum * 100))
+                lik_preg = round(prob_A[2]/nansum(prob_A) * 100)
             
             # Determine the output of InterVA
             prob_temp = prob_B
             prob_temp_names = prob_names[3:64]
             prob_C_names = prob_names[64:70]
-            top3 = [[] for _ in range(3)]
+            top3 = []
             cause1 = lik1 = cause2 = lik2 = cause3 = lik3 = None
             indet = 0
-            if amax(prob_B) < 0.4:
+            if nanmax(prob_temp) < 0.4:
                 cause1 = lik1 = cause2 = lik2 = cause3 = lik3 = " "
                 indet = 100
-            if amax(prob_temp) >= 0.4:
-                max1_loc = argmax(prob_temp)
-                lik1 = round(amax(prob_temp) * 100)
+            if nanmax(prob_temp) >= 0.4:
+                max1_loc = where(prob_temp == nanmax(prob_temp))[0][0]
+                lik1 = round(nanmax(prob_temp) * 100)
                 cause1 = prob_temp_names[max1_loc]
                 prob_temp = delete(prob_temp, max1_loc)
                 prob_temp_names.drop(prob_temp_names.index[max1_loc])
                 top3.append(lik1)
                 
-                max2_loc = argmax(prob_temp)
-                lik2 = round(amax(prob_temp) * 100)
+                max2_loc = where(prob_temp == nanmax(prob_temp))[0][0]
+                lik2 = round(nanmax(prob_temp) * 100)
                 cause2 = prob_temp_names[max2_loc]
-                if amax(prob_temp) < 0.5 * amax(prob_B):
+                if nanmax(prob_temp) < 0.5 * nanmax(prob_B):
                     lik2 = cause2 = " "
                 prob_temp = delete(prob_temp, max2_loc)
                 prob_temp_names.drop(prob_temp_names.index[max2_loc])
                 top3.append(lik2)
                 
-                max3_loc = argmax(prob_temp)
-                lik3 = round(amax(prob_temp) * 100)
+                max3_loc = where(prob_temp == nanmax(prob_temp))[0][0]
+                lik3 = round(nanmax(prob_temp) * 100)
                 cause3 = prob_temp_names[max3_loc]
-                if amax(prob_temp) < 0.5 * amax(prob_B):
+                if nanmax(prob_temp) < 0.5 * nanmax(prob_B):
                     lik3 = cause3 = " "
                 top3.append(lik3)
-                top3 = [float(x) if x != " " else 0 for x in top3]
-                top3 = array(top3)
+                top3 = array([float(x) if x != " " else 0.0 for x in top3])
                 indet = round(100 - nansum(top3))
             
             # Determine the Circumstances of Mortality CATegory (COMCAT) 
             # and probability
             comcat = ""
             comnum = None
-            prob_c_max = amax(prob_C)
-            if sum(prob_C) > 0:
-                prob_C = prob_C / sum(prob_C)
-            if prob_c_max < 0.5:
+            if nansum(prob_C) > 0:
+                prob_C = prob_C / nansum(prob_C)
+            if nanmax(prob_C) < 0.5:
                 comcat = "Multiple"
                 comnum = " "
-            else:
-                comcat = prob_C_names[argmax(prob_C)]
-                comnum = round(prob_c_max * 100)
+            if nanmax(prob_C) >= 0.5:
+                comcat = prob_C_names[where(prob_C == nanmax(prob_C))[0][0]]
+                comnum = round(nanmax(prob_C) * 100)
             
-            ID_list.append(index_current)
+            ID_list[i] = index_current
             combined_prob = Series(prob, index=prob_names)
             VA_result[i] = va5(index_current, self.malaria, self.hiv, preg_state, 
                                lik_preg, cause1, lik1, cause2, lik2, cause3, lik3, 
@@ -442,9 +453,11 @@ class InterVA5:
             if self.output == "extended":
                 save_va5_prob(VA_result[i], filename=self.filename, 
                               write=self.write)
+                VA_result[i] = VA_result[i] + list(combined_prob)
         if self.write:
             info("\n the following data discrepancies were identified and " +
-                 "handled: \n" + first_pass + "\nSecond pass\n" + second_pass)
+                 "handled: \n" + str(first_pass) + "\nSecond pass\n" + 
+                 str(second_pass))
         
         chdir(globle_dir)
         if not self.return_checked_data:
@@ -463,10 +476,13 @@ class InterVA5:
             index += 1
         ID_list = ID_list.drop(nan_indices)
         
+        result_header = ["ID", "MALPREV", "HIVPREV", "PREGSTAT", "PREGLIK", 
+                            "CAUSE1", "LIK1", "CAUSE2", "LIK2", "CAUSE3", "LIK3", 
+                            "INDET", "COMCAT", "COMNUM"]
+        if self.output == "extended":
+            result_header = result_header + list(self.causetextV5.iloc[:, 0])
         VA_result = DataFrame(VA_result)
-        VA_result.columns = ["ID", "MALPREV", "HIVPREV", "PREGSTAT", "PREGLIK", 
-                             "CAUSE1", "LIK1", "CAUSE2", "LIK2", "CAUSE3", "LIK3", 
-                             "INDET", "COMCAT", "COMNUM", "WHOLEPROB"]
+        VA_result.columns = result_header
         VA_result = VA_result.drop(nan_indices, axis=0)
         
         self.out = {"ID": ID_list,
