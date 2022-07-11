@@ -7,10 +7,9 @@ interva.interva5
 This module contains the class for the InterVA5 algorithm.
 """
 
-from unittest import result
 from pandas import (DataFrame, Series, read_csv, read_excel, to_numeric, isna)
-from numpy import (ndarray, nan, nansum, nanmax, array, amax, argmax, delete, 
-                   concatenate, divide, sum, where)
+from numpy import (ndarray, nan, nansum, nanmax, array, delete, where,
+                   concatenate)
 from os import path, chdir, getcwd, mkdir
 from logging import basicConfig, info, warning
 from csv import writer
