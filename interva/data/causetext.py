@@ -134,7 +134,7 @@ CAUSETEXTV5 = {
     "b_1299": {"cause": "Other and unspecified external CoD",
                "code": 12.99},
     "b_9800": {"cause": "Other and unspecified NCD",
-               "code": 98.00},
+               "code": 98},
     "c_cult": {"cause": "Culture",
                "code": "Culture"},
     "c_emer": {"cause": "Emergency",
