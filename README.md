@@ -1,5 +1,8 @@
 # interva
 
+[![image](https://img.shields.io/pypi/pyversions/interva)](https://pypi.org/project/interva/)
+[![pytest](https://github.com/verbal-autopsy-software/interva/actions/workflows/python-package.yml/badge.svg)](https://github.com/verbal-autopsy-software/interva/actions)
+
 Python implementation of the InterVA algorithm for assigning causes of death to verbal autopsy data
 
 
