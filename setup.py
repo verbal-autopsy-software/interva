@@ -1,6 +1,6 @@
 import os
 from codecs import open
-from setuptools import setup, find_packages
+from setuptools import setup, find_namespace_packages
 
 here = os.path.abspath(os.path.dirname(__file__))
 
@@ -22,25 +22,24 @@ setup(
     long_description_content_type="text/markdown",
     url=about["__url__"],
     license=about["__license__"],
-    packages=find_packages(),
+    packages=find_namespace_packages(),
     include_package_data=True,
+    package_dir={"": "."},
     package_data={
-        "interva": ["data/*"],
+        "interva.data": ["*.csv"],
     },
     install_requires=[
         "pandas",
         "numpy",
         "vacheck",
         ],
-    dependency_links=[
-        "git+https://github.com/verbal-autopsy-software/vacheck@0.0.1#egg=vacheck"
-    ],
     classifiers=[
         "Programming Language :: Python :: 3",
         "Programming Language :: Python :: 3.7",
         "Programming Language :: Python :: 3.8",
         "Programming Language :: Python :: 3.9",
+        "Programming Language :: Python :: 3.9",
         "License :: OSI Approved :: GNU General Public License v3 (GPLv3)",
-        "Operating System :: POSIX :: Linux",
+        "Operating System :: OS Independent",
     ],
 )
