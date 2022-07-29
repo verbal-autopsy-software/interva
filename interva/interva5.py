@@ -7,11 +7,12 @@ interva.interva5
 This module contains the class for the InterVA5 algorithm.
 """
 
-from pandas import (DataFrame, Series, read_csv, read_excel, to_numeric, isna)
-from numpy import (ndarray, nan, nansum, nanmax, array, delete, where,
+from pandas import (DataFrame, Index, Series, read_csv, read_excel, to_numeric, 
+                    isna, set_option)
+from numpy import (ndarray, nan, nansum, nanmax, argsort, array, delete, where,
                    concatenate, copy)
 from os import path, chdir, getcwd, mkdir
-from logging import basicConfig, info, warning
+from logging import FileHandler, getLogger
 from csv import writer
 from time import time
 from pkgutil import get_data
@@ -34,7 +35,8 @@ class InterVA5:
      "H" for high (~ 1:100 deaths), "L" for low (~ 1:1000), or "V" for very
      low (~ 1:10000)
     :type malaria: string
-    :param write: logical value
+    :param write: a logical value indicating whether the output should be written
+     to the csv file indicated by the filename parameter.
     :type write: boolean
     :param directory: The directory to store the output from InterVA5.
      It should either be an existing valid directory, or a new folder to be created.
@@ -82,7 +84,6 @@ class InterVA5:
         self.groupcode = groupcode
         self.sci = sci
         self.return_checked_data = return_checked_data
-        basicConfig(filename="errorlogV5.txt", filemode='a')
 
     def _check_data(self, va_input: Series, va_id: str, 
                     insilico_check: bool = False):
@@ -128,6 +129,10 @@ class InterVA5:
                 csv_writer = writer(csvfile)
                 csv_writer.writerow(x)
         
+        logger = getLogger()
+        file_handler = FileHandler("errorlogV5.txt", mode="a")
+        logger.addHandler(file_handler)
+        
         if not self.directory and self.write:
             raise IOError("error: please provide a directory (required when write = True)")
         if not self.directory:
@@ -171,7 +176,7 @@ class InterVA5:
         else:
             self.causetextV5.drop(self.causetextV5.columns[1], axis=1, inplace=True)
         if self.write:
-            info("Error & warning log built for InterVA5 %f \n", time())
+            logger.info("Error & warning log built for InterVA5 %f \n", time())
         if isinstance(self.va_input, str) and self.va_input[-4:] == ".csv":
             self.va_input = read_csv(self.va_input)
         if "i183o" in self.va_input.columns:
@@ -201,11 +206,11 @@ class InterVA5:
             input_col = va_input_names[i]
             std_col = valabels[i]
             if input_col.lower() != std_col.lower():
-                warning("Input column '{input_col}' does not match \
+                logger.warning("Input column '{input_col}' does not match \
                         InterVA5 standard: '{std_col}'")
                 count_changelabel = count_changelabel + 1
         if count_changelabel > 0:
-            warning("{count_changelabel} column names changed in input.\n" + 
+            logger.warning("{count_changelabel} column names changed in input.\n" + 
                     "If the change is undesirable, please change in the input " +
                     "to match standard InterVA5 input format.")
             va_input_names = valabels
@@ -266,7 +271,7 @@ class InterVA5:
         np = max(1, round(N/10))
         
         if self.write:  
-            info("\n\n the following records are incomplete and " +
+            logger.info("\n\n the following records are incomplete and " +
                 "excluded from further processing: \n\n")
             
         first_pass = []
@@ -426,8 +431,7 @@ class InterVA5:
                 comnum = round(nanmax(prob_C) * 100)
             
             ID_list[i] = index_current
-            prob = concatenate((prob_A, prob_B, prob_C))
-            combined_prob = Series(prob, index=prob_names)
+            combined_prob = Series(concatenate((prob_A, prob_B, prob_C)), index=prob_names)
             VA_result[i] = va5(index_current, self.malaria, self.hiv, preg_state, 
                                lik_preg, cause1, lik1, cause2, lik2, cause3, lik3, 
                                indet, comcat, comnum, wholeprob=combined_prob)
@@ -437,7 +441,7 @@ class InterVA5:
                 save_va5_prob(VA_result[i].copy(), filename=self.filename, 
                               write=self.write)
         if self.write:
-            info("\n the following data discrepancies were identified and " +
+            logger.info("\n the following data discrepancies were identified and " +
                  "handled: \n" + str(first_pass) + "\nSecond pass\n" + 
                  str(second_pass))
         
@@ -507,30 +511,243 @@ class InterVA5:
             va_df = read_csv(va_df)
         return va_df.loc[:, "ID"]
 
-    def plot_csmf(self, top=10, file=None):
+    def plot_csmf(self, top: int = 10, file: str = None):
         """Plot cause-specific mortality fraction (CSMF)."""
         pass
 
-    def get_csmf(self, top=10):
-        """Print top causes in cause-specific mortality fraction (CSMF)."""
-        pass
+    def get_csmf(self, top: int = 10, groupcode: bool = False):
+        """Return top causes in cause-specific mortality fraction (CSMF).
+        
+        :param top: number of top causes in the CSMF to be determined.
+        :type top: integer
+        :param groupcode: a logical value indicating whether or not the
+         group code will be included in the cause names.
+        :type groupcode: boolean
+        :return: the top causes in CSMF with their values.
+        :rtype: pandas.series
+        """
+        
+        va = self.out["VA5"]
+        set_option("display.max_rows", None)
+        set_option("display.max_columns", None)
+        
+        # for future compatibility with non-standard input
+        causenames = causeindex = []
+        for i in range(va.shape[0]):
+            if va.loc[i, "WHOLEPROB"] is not None:
+                causenames = va.loc[i, "WHOLEPROB"].index
+                causeindex = [x for x in range(len(causenames))]
+                break
+        include_probAC = False
+        
+        if self.groupcode:
+            temp_names = ["" for _ in range(len(causenames))]
+            for i in range(len(causenames)):
+                if i <= 2 or i >= 64:
+                    temp_names[i] = causenames[i]
+                else:
+                    cause_with_code = causenames[i]
+                    temp_names[i] = cause_with_code.split(" ", 1)[1]
+            causenames = Index(temp_names)
+        
+        # fix for removing the first 3 preg related death in standard input
+        if ("Not pregnant or recently delivered" in causenames[0] and
+            "Pregnancy ended within 6 weeks of death" in causenames[1] and
+            "Pregnant at death" in causenames[2] and
+            "Culture" in causenames[64] and
+            "Emergency" in causenames[65] and
+            "Health" in causenames[66] and
+            "Inevitable" in causenames[67] and
+            "Knowledge" in causenames[68] and
+            "Resources" in causenames[69]):
+            del causeindex[64:70]
+            del causeindex[0:3]
+            causenames = causenames.delete([0, 1, 2, 64, 65, 66, 67, 68, 69])
+            include_probAC = True
+            
+        causetextV5_horizontal = DataFrame(CAUSETEXTV5)
+        self.causetextV5 = causetextV5_horizontal.transpose()
+        if groupcode:
+            temp_names = ["" for _ in range(len(causenames))]
+            for i in range(len(causenames)):
+                if i <= 2 or i >= 64:
+                    temp_names[i] = causenames[i]
+                else:
+                    cause = str(self.causetextV5.iloc[i, 0])
+                    code = str(self.causetextV5.iloc[i, 1])
+                    temp_names[i] = code + " " + cause
+            causenames = Index(temp_names)
+        
+        # Check if there is a valid va object
+        if len(va) < 1:
+            print("No va5 object found")
+            return()
+        # Initialize the population distribution
+        dist = None
+        for i in range(len(va)):
+            if va.iloc[i, 14] is not None:
+                dist = [[0 for _ in range(len(va.iloc[i, 14]))]]
+                break
+        undeter = 0
+        
+        # Pick not simply the top # causes,
+        # but the top # causes reported by InterVA5
+        for i in range(len(va)):
+            if va.iloc[i, 14] is None:  #wholeprob exists
+                continue
+            this_dist_copy = va.iloc[i, 14].copy()
+            this_dist = this_dist_copy.to_numpy()
+            if include_probAC:
+                this_dist[0:3] = 0
+                this_dist[64:70] = 0
+            if max(this_dist) < 0.4:
+                this_undeter = 1 if sum(this_dist) == 0 else sum(this_dist)
+                undeter = undeter + this_undeter
+            else:
+                cutoff_3 = this_dist[argsort(-this_dist)][2]
+                cutoff_2 = this_dist[argsort(-this_dist)][1]
+                cutoff_1 = this_dist[argsort(-this_dist)][0]
+                cutoff = min(max(cutoff_1 * 0.5, cutoff_3), max(cutoff_1 * 0.5, cutoff_2))
+                
+                undeter = undeter + sum(this_dist[where(this_dist < cutoff)[0]])
+                this_dist[where(this_dist < cutoff)[0]] = 0
+                if va.iloc[i, 14] is not None:
+                    if i == 0:
+                        dist = this_dist
+                    else:
+                        dist = dist + this_dist
+        
+        dist = Series(dist)
+        dist_cod = None
+        # Normalize the probability for CODs
+        if undeter > 0:
+            dist_cod = dist.iloc[causeindex].copy()
+            dist_cod.loc[causeindex[len(causeindex)-1]+1] = undeter
+            dist_cod = dist_cod / dist_cod.sum()
+            dist_cod.index = causenames.append(Index(["Undetermined"]))
+        else:
+            dist_cod = dist.iloc[causeindex].copy()
+            dist_cod = dist_cod / dist_cod.sum()
+            dist_cod.index = causenames
+        if (isna(dist_cod).sum() == len(dist_cod)).all():
+            dist_cod[isna(dist_cod)] = 0
+            
+        dist_cod_sorted = dist_cod.copy()
+        dist_cod_sorted.sort_values(ascending=False, inplace=True)
+        # show causes with top non-zero values
+        show_top = 0
+        while dist_cod_sorted[show_top] > 0 and show_top < top:
+            show_top = show_top + 1
+        if show_top == top:
+            a = dist_cod_sorted[show_top]
+            b = dist_cod_sorted[show_top-1]
+            while show_top < len(dist_cod_sorted) and (abs(a-b) < (a+b) * 1e-7):
+                show_top = show_top + 1
+                a = dist_cod_sorted[show_top]
+                b = dist_cod_sorted[show_top-1]
+        top_csmf = dist_cod_sorted.head(show_top)
+        return(top_csmf)
 
-    def write_csmf(self):
-        """Write cause-specific mortality fraction (CSMF) to CSV file."""
-        pass
+    def write_csmf(self, top: int = 10, groupcode: bool = False,
+                   filename: str = "csmf"):
+        """Write cause-specific mortality fraction (CSMF) to CSV file.
+        
+        :param top: number of top causes in the CSMF to be determined.
+        :type top: integer
+        :param filename: the filename the user wishes to save the CSMF. 
+         No extension needed. The output is in .csv format by default.
+        :type filename: string
+        """
+        
+        set_option("display.max_rows", None)
+        set_option("display.max_columns", None)
+        csmf = self.get_csmf(top=top)
+        filename = filename + ".csv"
+        csmf.to_csv(filename, header=False)
 
-    def get_top_cod(self, top=3, include_propensities=False):
-        """Get top causes of death for each individual."""
-        pass
+    def get_indiv_prob(self, top: int = 0, include_propensities = False):
+        """Get individual causes of death distribution.
+        
+        :param top: number of top causes to be determined. If top is 0 or none,
+         all propensities and no top causes will be be returned.
+        :type top: integer
+        :param include_propensities: a logical value indicating whether the
+         propensities of top causes should be included. If top is 0 or none,
+         this boolean is automatically set to true.
+        :return: the individual causes of death distribution.
+        :rtype: pandas data.frame
+        """
+        
+        VA5 = self.out["VA5"]
+        num_indiv = VA5.shape[0]
+        cod_list = [[] for _ in range(num_indiv)]
+        column_names = []
+        if top == 0 or top is None:
+            column_names = VA5.loc[0, "WHOLEPROB"].iloc[3:64].index
+        else:
+            for i in range(top):
+                name = "CAUSE" + str(i+1)
+                column_names.append(name)
+                if include_propensities:
+                    prob = "PROPENSITY" + str(i+1) + ""
+                    column_names.append(prob)
+            
+        for indiv in range(num_indiv):
+            wholeprob = VA5.loc[indiv, "WHOLEPROB"]
+            prob_B = wholeprob.iloc[3:64].copy()
+            
+            if top == 0 or top is None:
+                cod_list[indiv] = prob_B
+            if top > 0:
+                prob_temp = prob_B.to_numpy()
+                prob_temp_names = prob_B.index
+                for cause_num in range(top):
+                    if cause_num == 0:
+                        max_loc = where(prob_temp == nanmax(prob_temp))[0][0]
+                        cause = cod_list[indiv] = [prob_temp_names[max_loc]]
+                        if include_propensities:
+                            if cause == " ":
+                                cod_list[indiv].append(" ")
+                            else:
+                                cod_list[indiv].append(nanmax(prob_temp))
+                        prob_temp = delete(prob_temp, max_loc)
+                    if cause_num > 0:
+                        max_loc = where(prob_temp == nanmax(prob_temp))[0][0]
+                        cause = ""
+                        if nanmax(prob_temp) < 0.5 * nanmax(prob_B):
+                            cause = " "
+                        else:
+                            cause = prob_temp_names[max_loc]
+                        cod_list[indiv].append(cause)
+                        if include_propensities:
+                            if cause == " ":
+                                cod_list[indiv].append(" ")
+                            else:
+                                cod_list[indiv].append(nanmax(prob_temp))
+                        prob_temp = delete(prob_temp, max_loc)
+        cod_df = DataFrame(cod_list, columns=column_names)
+        cod_df.insert(loc=0, column='ID', value=self.out["ID"])
+        return cod_df
 
-    def write_top_cod(self, top=3, include_propensities=False):
-        """Write top causes of death for each individual to CSV file."""
-        pass
-
-    def get_indiv_prob(self, include_propensities=False):
-        """Get individual causes of death distribution."""
-        pass
-
-    def write_indiv_prob(self, include_propensities=False):
-        """Write individual cause of death distribution to CSV file."""
-        pass
+    def write_indiv_prob(self, top: int = 0, include_propensities: bool = False, 
+                         filename: str = "indiv_prob"):
+        """Write individual cause of death distribution to CSV file.
+        
+        :param top: number of top causes to be determined. If top is 0 or none,
+         no causes and all propensities will be be displayed.
+        :type top: integer
+        :param include_propensities: a logical value indicating whether the
+         propensities of top causes should be included. If top is 0 or none,
+         this boolean is automatically set to true.
+        :type include_propensities: boolean
+        :param filename: the filename the user wishes to save the individual
+         cause distribution. No extension needed. The output is in .csv 
+         format by default.
+        :type filename: string
+        """
+        
+        set_option("display.max_rows", None)
+        set_option("display.max_columns", None)
+        indiv_prob = self.get_indiv_prob(top, include_propensities)
+        filename = filename + ".csv"
+        indiv_prob.to_csv(filename, index=False)
