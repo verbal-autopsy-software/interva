@@ -751,3 +751,39 @@ class InterVA5:
         indiv_prob = self.get_indiv_prob(top, include_propensities)
         filename = filename + ".csv"
         indiv_prob.to_csv(filename, index=False)
+
+
+def get_example_input() -> DataFrame:
+    """
+    Get an example input.
+
+    :return: 200 records of sample input.
+    :rtype: pandas.DataFrame
+    """
+
+    example_input_bytes = get_data(__name__, "data/randomva5.csv")
+    example_input = read_csv(BytesIO(example_input_bytes))
+    return example_input
+
+
+def get_probbase(version: str = "19") -> DataFrame:
+    """
+    Get the probbase (the source of the data consistency checks).
+
+    :param version: Probbase version
+    :type version: str
+    :return: 200 records of sample input.
+    :rtype: pandas.DataFrame
+    """
+
+    if version == "19":
+        probbase_bytes = get_data(__name__, "data/probbaseV5_19.csv")
+        probbase = read_csv(BytesIO(probbase_bytes))
+        # note: version 19 does not have first row included in v18
+    else:
+        probbase_xls = get_data("interva", "data/probbase.xls")
+        probbase = read_excel(probbase_xls)
+        # note: drop first row so it matches the input
+        probbase.drop([probbase.index[0]], inplace=True)
+
+    return probbase
