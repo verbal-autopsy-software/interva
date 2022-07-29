@@ -661,7 +661,7 @@ class InterVA5:
         
         set_option("display.max_rows", None)
         set_option("display.max_columns", None)
-        csmf = self.get_csmf(top=top)
+        csmf = self.get_csmf(top=top, groupcode=groupcode)
         filename = filename + ".csv"
         csmf.to_csv(filename, header=False)
 
