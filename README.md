@@ -167,16 +167,16 @@ To get ids from the InterVA5 object:
 ```python
 >>> ids = iv5out.get_ids()
 >>> ids
-0      NaN
-1      NaN
-2      NaN
-3      NaN
-4      NaN
-      ... 
-195    NaN
-196    NaN
-197    NaN
-198    NaN
-199    NaN
+0        d1
+1        d2
+2        d3
+3        d4
+4        d5
+       ...
+195    d196
+196    d197
+197    d198
+198    d199
+199    d200
 Name: ID, Length: 200, dtype: object
 ```

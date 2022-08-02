@@ -161,9 +161,9 @@ def test_get_ids_correct_output(example_va_data):
     va_data = example_va_data
     iv5out = InterVA5(va_data, hiv="h", malaria="l", write=False, directory="VA test", filename="VA5_result", output="extended", append=False)
     ids_output = iv5out.get_ids()
+    expected = Series(["d" + str(x+1) for x in range(len(va_data))], name="ID")
     assert isinstance(ids_output, Series)
-    assert ids_output.name == "ID"
-    assert len(ids_output) == len(va_data)
+    assert (ids_output == expected).all()
 
 # plot function tests
 def test_plot_csmf():
