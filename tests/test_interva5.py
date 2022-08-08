@@ -7,6 +7,7 @@ from io import BytesIO
 from os.path import isfile
 
 from interva.interva5 import InterVA5
+from interva.interva5 import get_probbase
 
 @pytest.fixture
 def example_va_data():
@@ -24,43 +25,40 @@ def example_va_ids():
 # run function tests
 def test_run_write_without_directory_IO_error(example_va_data):
     va_data = example_va_data
-    iv5out = InterVA5(va_data, hiv="h", malaria="l", write=True, directory=None, filename="VA5_result", output="extended", append=False)
+    iv5out = InterVA5(va_data, hiv="h", malaria="l", write=True, output="extended", append=False)
     with pytest.raises(IOError):
         iv5out.run()
 
 def test_run_incorrect_sci_shape(example_va_data):
     va_data = example_va_data
-    probbase_xls = get_data("interva", "data/probbase.xls")
-    probbase = read_excel(probbase_xls)
-    probbaseV5 = probbase.to_numpy()
+    probbase = get_probbase().copy()
     probbase.drop([probbase.index[0]], inplace=True)
-    probbase.drop([probbase.index[0]], inplace=True)
-    iv5out = InterVA5(va_data, hiv="h", malaria="l", write=False, directory="VA test", filename="VA5_result", output="extended", append=False, sci=probbaseV5)
+    iv5out = InterVA5(va_data, hiv="h", malaria="l", write=False, directory=".", output="extended", sci=probbase)
     with pytest.raises(IOError):
         iv5out.run()
 
 def test_run_incorrect_data_last_col(example_va_data):
     va_data = example_va_data
     va_data.rename(columns={'i459o': 'i000a'}, inplace=True)
-    iv5out = InterVA5(va_data, hiv="h", malaria="l", write=False, directory="VA test", filename="VA5_result", output="extended", append=False)
+    iv5out = InterVA5(va_data, hiv="h", malaria="l", write=False, directory=".", output="extended")
     with pytest.raises(IOError):
         iv5out.run()
 
 def test_run_invalid_malaria_indicator(example_va_data):
     va_data = example_va_data
-    iv5out = InterVA5(va_data, hiv="h", malaria="m", write=False, directory="VA test", filename="VA5_result", output="extended", append=False)
+    iv5out = InterVA5(va_data, hiv="h", malaria="m", write=False, directory=".", output="extended")
     with pytest.raises(IOError):
         iv5out.run()
 
 def test_run_correct_va_input(example_va_data):
     va_data = example_va_data
-    iv5out = InterVA5(va_data, hiv="h", malaria="l", write=False, directory="VA test", filename="VA5_result", output="extended", append=False)
+    iv5out = InterVA5(va_data, hiv="h", malaria="l", write=False, directory=".", output="extended")
     iv5out.run()
     assert isinstance(iv5out.va_input, DataFrame)
 
 def test_run_correct_id_output(example_va_data: DataFrame, example_va_ids: Series):
     va_data = example_va_data
-    iv5out = InterVA5(va_data, hiv="h", malaria="l", write=False, directory="VA test", filename="VA5_result", output="extended", append=False, return_checked_data=True)
+    iv5out = InterVA5(va_data, hiv="h", malaria="l", write=False, directory=".", output="extended", return_checked_data=True)
     run_output = iv5out.run()
     id_output = run_output["ID"]
     assert isinstance(id_output, Series)
@@ -68,7 +66,7 @@ def test_run_correct_id_output(example_va_data: DataFrame, example_va_ids: Serie
 
 def test_run_correct_VA5_output(example_va_data, example_va_ids):
     va_data = example_va_data
-    iv5out = InterVA5(va_data, hiv="h", malaria="l", write=False, directory="VA test", filename="VA5_result", output="extended", append=False, return_checked_data=True)
+    iv5out = InterVA5(va_data, hiv="h", malaria="l", write=False, directory=".", output="extended", return_checked_data=True)
     run_output = iv5out.run()
     va5_output = run_output["VA5"]
     # VA_result.columns = ["ID", "MALPREV", "HIVPREV", "PREGSTAT", "PREGLIK", 
@@ -93,7 +91,7 @@ def test_run_correct_VA5_output(example_va_data, example_va_ids):
 
 def test_run_correct_malaria_output(example_va_data):
     va_data = example_va_data
-    iv5out = InterVA5(va_data, hiv="h", malaria="l", write=False, directory="VA test", filename="VA5_result", output="extended", append=False)
+    iv5out = InterVA5(va_data, hiv="h", malaria="l", write=False, directory=".", output="extended")
     run_output = iv5out.run()
     malaria_output = run_output["Malaria"]
     assert isinstance(malaria_output, str)
@@ -101,7 +99,7 @@ def test_run_correct_malaria_output(example_va_data):
 
 def test_run_correct_hiv_output(example_va_data):
     va_data = example_va_data
-    iv5out = InterVA5(va_data, hiv="h", malaria="l", write=False, directory="VA test", filename="VA5_result", output="extended", append=False)
+    iv5out = InterVA5(va_data, hiv="h", malaria="l", write=False, directory=".", output="extended")
     run_output = iv5out.run()
     hiv_output = run_output["HIV"]
     assert isinstance(hiv_output, str)
@@ -109,7 +107,7 @@ def test_run_correct_hiv_output(example_va_data):
 
 def test_run_correct_checked_data_output_if_true_return(example_va_data):
     va_data = example_va_data
-    iv5out = InterVA5(va_data, hiv="h", malaria="l", write=False, directory="VA test", filename="VA5_result", output="extended", append=False, return_checked_data=True)
+    iv5out = InterVA5(va_data, hiv="h", malaria="l", write=False, directory=".", output="extended", return_checked_data=True)
     run_output = iv5out.run()
     checked_data_output = run_output["checked_data"]
     assert isinstance(checked_data_output, DataFrame)
@@ -117,7 +115,7 @@ def test_run_correct_checked_data_output_if_true_return(example_va_data):
 
 def test_run_correct_checked_data_output_if_false_return(example_va_data):
     va_data = example_va_data
-    iv5out = InterVA5(va_data, hiv="h", malaria="l", write=False, directory="VA test", filename="VA5_result", output="extended", append=False, return_checked_data=False)
+    iv5out = InterVA5(va_data, hiv="h", malaria="l", write=False, directory=".", output="extended", return_checked_data=False)
     run_output = iv5out.run()
     checked_data_output = run_output["checked_data"]
     assert isinstance(checked_data_output, str)
@@ -126,40 +124,40 @@ def test_run_correct_checked_data_output_if_false_return(example_va_data):
 # get hiv/malaria function tests
 def test_get_hiv(example_va_data):
     va_data = example_va_data
-    iv5out = InterVA5(va_data, hiv="h", malaria="l", write=False, directory="VA test", filename="VA5_result", output="extended", append=False)
+    iv5out = InterVA5(va_data, hiv="h", malaria="l", write=False, directory=".", output="extended")
     assert iv5out.get_hiv() == "h"
 
 def test_get_malaria(example_va_data):
     va_data = example_va_data
-    iv5out = InterVA5(va_data, hiv="h", malaria="l", write=False, directory="VA test", filename="VA5_result", output="extended", append=False)
+    iv5out = InterVA5(va_data, hiv="h", malaria="l", write=False, directory=".", output="extended")
     assert iv5out.get_malaria() == "l"
 
 # set hiv/malaria function tests
 def test_set_hiv_valid_change(example_va_data):
     va_data = example_va_data
-    iv5out = InterVA5(va_data, hiv="h", malaria="l", write=False, directory="VA test", filename="VA5_result", output="extended", append=False)
+    iv5out = InterVA5(va_data, hiv="h", malaria="l", write=False, directory=".", output="extended")
     assert iv5out.set_hiv("v") == "v"
 
 def test_set_hiv_invalid_change(example_va_data):
     va_data = example_va_data
-    iv5out = InterVA5(va_data, hiv="h", malaria="l", write=False, directory="VA test", filename="VA5_result", output="extended", append=False)
+    iv5out = InterVA5(va_data, hiv="h", malaria="l", write=False, directory=".", output="extended")
     orig_hiv = iv5out.get_hiv()
     assert iv5out.set_hiv("m") == orig_hiv
     
 def test_set_malaria_valid_change(example_va_data):
     va_data = example_va_data
-    iv5out = InterVA5(va_data, hiv="h", malaria="l", write=False, directory="VA test", filename="VA5_result", output="extended", append=False)
+    iv5out = InterVA5(va_data, hiv="h", malaria="l", write=False, directory=".", output="extended")
     assert iv5out.set_malaria("h") == "h"
 
 def test_set_malaria_invalid_change(example_va_data):
     va_data = example_va_data
-    iv5out = InterVA5(va_data, hiv="h", malaria="l", write=False, directory="VA test", filename="VA5_result", output="extended", append=False)
+    iv5out = InterVA5(va_data, hiv="h", malaria="l", write=False, directory=".", output="extended")
     assert iv5out.set_malaria("m") == "l"
 
 # get ids function tests
 def test_get_ids_correct_output(example_va_data):
     va_data = example_va_data
-    iv5out = InterVA5(va_data, hiv="h", malaria="l", write=False, directory="VA test", filename="VA5_result", output="extended", append=False)
+    iv5out = InterVA5(va_data, hiv="h", malaria="l", write=False, directory=".", output="extended")
     ids_output = iv5out.get_ids()
     expected = Series(["d" + str(x+1) for x in range(len(va_data))], name="ID")
     assert isinstance(ids_output, Series)
@@ -172,7 +170,7 @@ def test_plot_csmf():
 # get csmf function tests
 def test_get_csmf_shape(example_va_data):
     va_data = example_va_data
-    iv5out = InterVA5(va_data, hiv="h", malaria="l", write=False, directory="VA test", filename="VA5_result", output="extended", append=False)
+    iv5out = InterVA5(va_data, hiv="h", malaria="l", write=False, directory=".", output="extended")
     iv5out.run()
     csmf = iv5out.get_csmf(top=5)
     assert isinstance(csmf, Series)
@@ -180,7 +178,7 @@ def test_get_csmf_shape(example_va_data):
 
 def test_write_csmf(example_va_data):
     va_data = example_va_data
-    iv5out = InterVA5(va_data, hiv="h", malaria="l", write=False, directory="VA test", filename="VA5_result", output="extended", append=False)
+    iv5out = InterVA5(va_data, hiv="h", malaria="l", write=False, directory=".", output="extended")
     iv5out.run()
     iv5out.write_csmf(top=5, filename="csmf_top_5")
     assert isfile('csmf_top_5.csv')
@@ -191,7 +189,7 @@ def test_write_csmf(example_va_data):
 
 def test_get_indiv_prob_top_none(example_va_data):
     va_data = example_va_data
-    iv5out = InterVA5(va_data, hiv="h", malaria="l", write=False, directory="VA test", filename="VA5_result", output="extended", append=False)
+    iv5out = InterVA5(va_data, hiv="h", malaria="l", write=False, directory=".", output="extended")
     run_output = iv5out.run()
     indiv_prob = iv5out.get_indiv_prob(top=0)
     assert isinstance(indiv_prob, DataFrame)
@@ -200,7 +198,7 @@ def test_get_indiv_prob_top_none(example_va_data):
 
 def test_get_indiv_prob_top_5(example_va_data):
     va_data = example_va_data
-    iv5out = InterVA5(va_data, hiv="h", malaria="l", write=False, directory="VA test", filename="VA5_result", output="extended", append=False)
+    iv5out = InterVA5(va_data, hiv="h", malaria="l", write=False, directory=".", output="extended")
     run_output = iv5out.run()
     indiv_prob = iv5out.get_indiv_prob(top=5, include_propensities=True)
     assert isinstance(indiv_prob, DataFrame)
@@ -209,7 +207,7 @@ def test_get_indiv_prob_top_5(example_va_data):
 
 def test_write_indiv_prob_top_5(example_va_data):
     va_data = example_va_data
-    iv5out = InterVA5(va_data, hiv="h", malaria="l", write=False, directory="VA test", filename="VA5_result", output="extended", append=False)
+    iv5out = InterVA5(va_data, hiv="h", malaria="l", write=False, directory=".", output="extended")
     run_output = iv5out.run()
     iv5out.write_indiv_prob(top=5, filename="indiv_prob_top_5")
     assert isfile('indiv_prob_top_5.csv')

@@ -12,7 +12,7 @@ from pandas import (DataFrame, Index, Series, read_csv, read_excel, to_numeric,
 from numpy import (ndarray, nan, nansum, nanmax, argsort, array, delete, where,
                    concatenate, copy)
 from os import path, chdir, getcwd, mkdir
-from logging import FileHandler, getLogger
+from logging import INFO, FileHandler, getLogger
 from csv import writer
 from time import time
 from pkgutil import get_data
@@ -95,11 +95,15 @@ class InterVA5:
     def run(self):
         """Assign causes of death.
         
-        :return: ids of VA input, VA results with cause assignments and
-         likelihoods, likelihood of malaria and HIV as causes of death,
-         and cleaned data from data consistency checks.
-        :rtype: dictionary with keys ID (pandas.series), 
-         VA_result (pandas data.frame), Malaria (str), HIV (str), and
+        :return: ids of VA input,
+         VA results with cause assignments and likelihoods,
+         likelihood of malaria and HIV as causes of death, and
+         cleaned data from data consistency checks.
+        :rtype: dictionary with keys
+         ID (pandas.series), 
+         VA5 (pandas data.frame),
+         Malaria (str),
+         HIV (str), and
          checked_data (pandas data.frame).
         """
         
@@ -128,26 +132,21 @@ class InterVA5:
             with open(filename, 'a', newline="") as csvfile:
                 csv_writer = writer(csvfile)
                 csv_writer.writerow(x)
-        
-        logger = getLogger()
-        file_handler = FileHandler("errorlogV5.txt", mode="a")
-        logger.addHandler(file_handler)
-        
-        if not self.directory and self.write:
+
+        if self.directory is None and self.write:
             raise IOError("error: please provide a directory (required when write = True)")
-        if not self.directory:
+        if self.directory is None:
             self.directory = getcwd()
         if not path.isdir(self.directory):
             mkdir(self.directory)
         globle_dir = getcwd()
-        chdir(self.directory)
+        if globle_dir != self.directory:
+            chdir(self.directory)
         
         probbaseV5 = None
         if self.sci is None:
-            probbase_xls = get_data("interva", "data/probbase.xls")
-            probbase = read_excel(probbase_xls)
-            probbase.drop([probbase.index[0]], inplace=True)
-            probbaseV5 = probbase.to_numpy()
+            probbase_df = get_probbase(version="19").copy()
+            probbaseV5 = probbase_df.to_numpy()
         if self.sci is not None:
             validSCI = True
             if not isinstance(self.sci, DataFrame) and \
@@ -175,7 +174,12 @@ class InterVA5:
             self.causetextV5.drop(self.causetextV5.columns[0], axis=1, inplace=True)
         else:
             self.causetextV5.drop(self.causetextV5.columns[1], axis=1, inplace=True)
+        logger = None
         if self.write:
+            logger = getLogger()
+            logger.setLevel(INFO)
+            file_handler = FileHandler("errorlogV5.txt")
+            logger.addHandler(file_handler)
             logger.info("Error & warning log built for InterVA5 %f \n", time())
         if isinstance(self.va_input, str) and self.va_input[-4:] == ".csv":
             self.va_input = read_csv(self.va_input)
@@ -641,7 +645,7 @@ class InterVA5:
         if show_top == top:
             a = dist_cod_sorted[show_top]
             b = dist_cod_sorted[show_top-1]
-            while show_top < len(dist_cod_sorted) and (abs(a-b) < (a+b) * 1e-7):
+            while show_top < len(dist_cod_sorted) and (abs(a-b) < (a+b) * 1e-5):
                 show_top = show_top + 1
                 a = dist_cod_sorted[show_top]
                 b = dist_cod_sorted[show_top-1]
