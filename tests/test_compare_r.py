@@ -40,15 +40,15 @@ py_csmf_top15_check = iv5out.get_csmf(top=15, groupcode=False)
 def test_r_VA5_comparison():
     for i in range(r_prob_check.shape[0]):
         for j in range(r_prob_check.shape[1]):
-            a = r_prob_check.iloc[i, j]
-            b = py_prob_check[i][j]
-            assert abs(a-b) <= (a+b) * 0.1
+            a = round(r_prob_check.iloc[i, j], 10)
+            b = round(py_prob_check[i][j], 10)
+            assert a == b
 
 def test_r_CSMF_top15_comparison():
     assert (py_csmf_top15_check.index == r_csmf_top15_check.index).all()
     py_csmf_top15 = py_csmf_top15_check.to_numpy()
     r_csmf_top15 = r_csmf_top15_check.to_numpy()
     for i in range(len(r_csmf_top15_check)):
-        a = float(py_csmf_top15[i])
-        b = float(r_csmf_top15[i])
-        assert abs(a-b) < ((a+b) * 0.1)
+        a = round(float(py_csmf_top15[i]), 10)
+        b = round(float(r_csmf_top15[i]), 10)
+        assert a == b
