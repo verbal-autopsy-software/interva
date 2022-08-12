@@ -17,6 +17,7 @@ from csv import writer
 from time import time
 from pkgutil import get_data
 from io import BytesIO
+from typing import Union
 
 from interva.data.causetext import CAUSETEXTV5
 from vacheck.datacheck5 import datacheck5
@@ -67,10 +68,10 @@ class InterVA5:
     :param others: not used
     """
 
-    def __init__(self, va_input, hiv: str, malaria: str, write: bool = True, 
-                 directory = None, filename: str = "VA5_result", 
-                 output: str = "classic", append: bool = False, 
-                 groupcode: bool = False, sci = None, 
+    def __init__(self, va_input: Union[DataFrame, str], hiv: str, malaria: str, 
+                 write: bool = True, directory: str = None, 
+                 filename: str = "VA5_result", output: str = "classic", 
+                 append: bool = False, groupcode: bool = False, sci = None, 
                  return_checked_data: bool = False, *others) -> dict:
 
         self.va_input = va_input
@@ -86,13 +87,12 @@ class InterVA5:
         self.return_checked_data = return_checked_data
 
     def _check_data(self, va_input: Series, va_id: str, 
-                    insilico_check: bool = False):
+                    insilico_check: bool = False) -> dict:
         """Run data check."""
         
         return datacheck5(va_input, va_id, insilico_check)
         
-
-    def run(self):
+    def run(self) -> dict:
         """Assign causes of death.
         
         :return: ids of VA input,
@@ -107,13 +107,20 @@ class InterVA5:
          checked_data (pandas data.frame).
         """
         
-        def va5(id, malprev, hivprev, pregstat, preglik, cause1, lik1, cause2, 
-                lik2, cause3, lik3, indet, comcat, comnum, wholeprob, *others):
+        def va5(id: str, malprev: str, hivprev: str, pregstat: str, 
+                preglik: Union[str, int], cause1: str, lik1: Union[str, int], 
+                cause2: str, lik2: Union[str, int], cause3: str, 
+                lik3: Union[str, int], indet: int, comcat: str, 
+                comnum: Union[str, int], wholeprob: Series, *others) -> list:
+            """ Returns an individual VA result. """
+            
             return [id, str(malprev), str(hivprev), pregstat, preglik, 
                     cause1, lik1, cause2, lik2, cause3, lik3, indet, 
                     str(comcat), comnum, wholeprob]
                     
-        def save_va5(x: list, filename: str, write: bool):
+        def save_va5(x: list, filename: str, write: bool) -> None:
+            """ Saves the VA5 result to csv, without propensities. """
+            
             if not write:
                 return()
             del x[14]
@@ -122,7 +129,9 @@ class InterVA5:
                 csv_writer = writer(csvfile)
                 csv_writer.writerow(x)
         
-        def save_va5_prob(x: list, filename: str, write: bool):
+        def save_va5_prob(x: list, filename: str, write: bool) -> None:
+            """ Saves the VA5 result to csv, with propensities. """
+            
             if not write:
                 return()
             prob = x.pop(14)
@@ -472,20 +481,20 @@ class InterVA5:
                     "HIV": self.hiv,
                     "checked_data": self.checked_data}
         return self.out
-         
-    def get_hiv(self):
+
+    def get_hiv(self) -> str:
         """Get HIV parameter."""
         
         print(f"HIV parameter is {self.hiv}")
         return self.hiv
 
-    def get_malaria(self):
+    def get_malaria(self) -> str:
         """Get malaria parameter."""
         
         print(f"Malaria parameter is {self.malaria}")
         return self.malaria
 
-    def set_hiv(self, hiv_level):
+    def set_hiv(self, hiv_level: str) -> str:
         """Set HIV parameter."""
         
         hiv_lvl = hiv_level.lower()
@@ -496,7 +505,7 @@ class InterVA5:
         return self.hiv
         print(f"HIV parameter is {self.hiv}")
 
-    def set_malaria(self, malaria_level):
+    def set_malaria(self, malaria_level: str) -> str:
         """Set malaria parameter."""
         
         malaria_lvl = malaria_level.lower()
@@ -507,7 +516,7 @@ class InterVA5:
         return self.malaria
         print(f"Malaria parameter is {self.malaria}")
 
-    def get_ids(self):
+    def get_ids(self) -> Series:
         """Return pandas series of ID column in data."""
         
         va_df = self.va_input
@@ -515,11 +524,11 @@ class InterVA5:
             va_df = read_csv(va_df)
         return va_df.loc[:, "ID"]
 
-    def plot_csmf(self, top: int = 10, file: str = None):
+    def plot_csmf(self, top: int = 10, file: str = None) -> None:
         """Plot cause-specific mortality fraction (CSMF)."""
         pass
 
-    def get_csmf(self, top: int = 10, groupcode: bool = False):
+    def get_csmf(self, top: int = 10, groupcode: bool = False) -> Series:
         """Return top causes in cause-specific mortality fraction (CSMF).
         
         :param top: number of top causes in the CSMF to be determined.
@@ -653,7 +662,7 @@ class InterVA5:
         return(top_csmf)
 
     def write_csmf(self, top: int = 10, groupcode: bool = False,
-                   filename: str = "csmf"):
+                   filename: str = "csmf") -> None:
         """Write cause-specific mortality fraction (CSMF) to CSV file.
         
         :param top: number of top causes in the CSMF to be determined.
@@ -669,7 +678,8 @@ class InterVA5:
         filename = filename + ".csv"
         csmf.to_csv(filename, header=False)
 
-    def get_indiv_prob(self, top: int = 0, include_propensities = False):
+    def get_indiv_prob(self, top: int = 0, 
+                       include_propensities: bool = False) -> DataFrame:
         """Get individual causes of death distribution.
         
         :param top: number of top causes to be determined. If top is 0 or none,
@@ -734,7 +744,7 @@ class InterVA5:
         return cod_df
 
     def write_indiv_prob(self, top: int = 0, include_propensities: bool = False, 
-                         filename: str = "indiv_prob"):
+                         filename: str = "indiv_prob") -> None:
         """Write individual cause of death distribution to CSV file.
         
         :param top: number of top causes to be determined. If top is 0 or none,
