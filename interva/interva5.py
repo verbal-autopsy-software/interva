@@ -11,6 +11,8 @@ from pandas import (DataFrame, Index, Series, read_csv, read_excel, to_numeric,
                     isna, set_option)
 from numpy import (ndarray, nan, nansum, nanmax, argsort, array, delete, where,
                    concatenate, copy)
+from decimal import Decimal
+from math import isclose
 from os import path, chdir, getcwd, mkdir
 from logging import INFO, FileHandler, getLogger
 from csv import writer
@@ -614,16 +616,32 @@ class InterVA5:
                 this_dist[0:3] = 0
                 this_dist[64:70] = 0
             if max(this_dist) < 0.4:
-                this_undeter = 1 if sum(this_dist) == 0 else sum(this_dist)
+                this_undeter = 1 if isclose(sum(this_dist), 0) else sum(this_dist)
                 undeter = undeter + this_undeter
             else:
-                cutoff_3 = this_dist[argsort(-this_dist)][2]
-                cutoff_2 = this_dist[argsort(-this_dist)][1]
-                cutoff_1 = this_dist[argsort(-this_dist)][0]
-                cutoff = min(max(cutoff_1 * 0.5, cutoff_3), max(cutoff_1 * 0.5, cutoff_2))
+                cutoff_3 = Decimal(this_dist[argsort(-this_dist)][2])
+                cutoff_2 = Decimal(this_dist[argsort(-this_dist)][1])
+                cutoff_1 = Decimal(this_dist[argsort(-this_dist)][0])
+                cutoff_1_halved = cutoff_1 / Decimal('2')
+                cutoff_pt1 = cutoff_3.max(cutoff_1_halved)
+                cutoff_pt2 = cutoff_2.max(cutoff_1_halved)
+                cutoff = cutoff_pt1.min(cutoff_pt2)
+                adj_cutoff = cutoff - Decimal(1e-15)
                 
-                undeter = undeter + sum(this_dist[where(this_dist < cutoff)[0]])
-                this_dist[where(this_dist < cutoff)[0]] = 0
+                undeter = undeter + sum(this_dist[where(this_dist < adj_cutoff)[0]])
+                this_dist[where(this_dist < adj_cutoff)[0]] = 0
+                
+                temp_len = len(this_dist[where(this_dist > 0)[0]])
+                close_indices = []
+                for j in range(temp_len):
+                    if abs(Decimal(this_dist[where(this_dist > 0)[0]][j]) - cutoff) < 4e-29:
+                        close_indices.append(where(this_dist > 0)[0][j])
+                
+                close_indices.sort(reverse=True)
+                for k in close_indices:
+                    undeter = undeter + this_dist[k]
+                    this_dist[k] = 0
+            
                 if va.iloc[i, 14] is not None:
                     if i == 0:
                         dist = this_dist
