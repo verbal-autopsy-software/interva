@@ -22,12 +22,14 @@ jobs:
     steps:
     - uses: actions/checkout@v1
     - uses: r-lib/actions/setup-r@master
-    - name: Install dependencies
+    - name: Install dependencies for Linux
+      if: runner.os == 'Linux'
       run: |
-        if: runner.os == 'Linux'
           sudo pip install --upgrade pip
           sudo pip install interva
-        if: runner.os != 'Linux':
+    - name: Install dependencies for Windows and macOS
+      if: runner.os != 'Linux'
+      run: |
           pip install --upgrade pip
           pip install interva
     - uses: actions/checkout@v3
