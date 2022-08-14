@@ -24,9 +24,12 @@ jobs:
     - uses: r-lib/actions/setup-r@master
     - name: Install dependencies
       run: |
-        sudo apt-get update
-        sudo apt-get install curl libcurl4-openssl-dev
-        Rscript -e "install.packages('InterVA5')"
+        if: runner.os == 'Linux'
+          sudo pip install --upgrade pip
+          sudo pip install interva
+        if: runner.os != 'Linux':
+          pip install --upgrade pip
+          pip install interva
     - uses: actions/checkout@v3
     - name: Set up Python ${{ matrix.python-version }}
       uses: actions/setup-python@v3
