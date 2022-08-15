@@ -25,13 +25,15 @@ jobs:
     - name: Install dependencies for Linux
       if: runner.os == 'Linux'
       run: |
-          sudo pip install --upgrade pip
-          sudo pip install interva
+          sudo pip3 install --upgrade pip
+          sudo pip3 install interva
+          Rscript -e "install.packages('InterVA5')"
     - name: Install dependencies for Windows and macOS
       if: runner.os != 'Linux'
       run: |
-          pip install --upgrade pip
-          pip install interva
+          pip3 install --upgrade pip
+          pip3 install interva
+          Rscript -e "install.packages('InterVA5')"
     - uses: actions/checkout@v3
     - name: Set up Python ${{ matrix.python-version }}
       uses: actions/setup-python@v3
@@ -39,9 +41,10 @@ jobs:
         python-version: ${{ matrix.python-version }}
     - name: Install dependencies
       run: |
-        python -m pip install --upgrade pip
-        python -m pip install flake8 pytest rpy2
-        pip install -e .
+        python3 -m pip install --upgrade pip
+        python3 -m pip install flake8 pytest rpy2
+        pip3 install -e .
+        Rscript -e "install.packages('InterVA5')"
     - name: Lint with flake8
       run: |
         # stop the build if there are Python syntax errors or undefined names
