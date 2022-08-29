@@ -34,7 +34,8 @@ with localconverter(robjects.default_converter + pandas2ri.converter):
 
 va_data = get_example_input()
 iv5out = InterVA5(va_data, hiv="h", malaria="l", directory=".", groupcode=False)
-py_prob_check = iv5out.run()["VA5"].loc[:, "WHOLEPROB"]
+iv5out.run()
+py_prob_check = iv5out.out["VA5"].loc[:, "WHOLEPROB"]
 py_csmf_top15_check = iv5out.get_csmf(top=15, groupcode=False)
 
 def test_r_VA5_comparison():

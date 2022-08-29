@@ -54,7 +54,7 @@ To initialize an InterVA5 object:
 To run the InterVA5 algorithm on the InterVA5 object:  
 
 ```python
->>> run_output = iv5out.run()
+>>> iv5out.run()
 Using Probbase version: probbase v18 20200403 
 ..........10% completed
 ..........20% completed
@@ -72,8 +72,7 @@ Using Probbase version: probbase v18 20200403
 To access the algorithm output:  
 
 ```python
->>> id_output = run_output["ID"]
->>> id_output
+>>> iv5out.out["ID"]
 0        d1
 1        d2
 2        d3
@@ -86,8 +85,7 @@ To access the algorithm output:
 198    d199
 199    d200
 Name: ID, Length: 200, dtype: object
->>> va5_output = run_output["VA5"]
->>> va5_output
+>>> iv5out.out["VA5"]
        ID MALPREV  ... COMNUM                                          WHOLEPROB
 0      d1       l  ...     99  cause
 Not pregnant or recently delivered      ...
@@ -112,14 +110,11 @@ Not pregnant or recently delivered      ...
 Not pregnant or recently delivered      ...
 
 [200 rows x 15 columns]
->>> malaria_output = run_output["Malaria"]
->>> malaria_output
+>>> iv5out.out["Malaria"]
 'l'
->>> hiv_output = run_output["HIV"]
->>> hiv_output
+>>> iv5out.out["HIV"]
 'h'
->>> checked_data_output = run_output["checked_data"]
->>> checked_data_output
+>>> iv5out.out["checked_data"]
      ID  i004a  i004b  i019a  i019b  ...  i455o  i456o  i457o  i458o  i459o
 0   NaN    NaN    NaN    1.0    NaN  ...      0      0      0      0      0
 1   NaN    NaN    NaN    NaN    1.0  ...      0      0      0      0      0

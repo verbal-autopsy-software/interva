@@ -7,7 +7,7 @@ interva.interva5
 This module contains the class for the InterVA5 algorithm.
 """
 
-from pandas import (DataFrame, Index, Series, read_csv, read_excel, to_numeric, 
+from pandas import (DataFrame, Index, Series, read_csv, read_excel, to_numeric,
                     isna, set_option)
 from numpy import (ndarray, nan, nansum, nanmax, argsort, array, delete, where,
                    concatenate, copy)
@@ -31,50 +31,53 @@ class InterVA5:
     :param va_input: Verbal Autopsy data
     :type va_input: pandas data.frame or path to CSV file
     :param hiv: likelihood of HIV as a cause of death.  Possible values are
-     "H" for high (~ 1:100 deaths), "L" for low (~ 1:1000), or "V" for very
-     low (~ 1:10000)
+    "H" for high (~ 1:100 deaths), "L" for low (~ 1:1000), or "V" for very
+    low (~ 1:10000)
     :type hiv: string
-    :param malaria: likelihood of malaria as a cause of death.  Possible values are
-     "H" for high (~ 1:100 deaths), "L" for low (~ 1:1000), or "V" for very
-     low (~ 1:10000)
+    :param malaria: likelihood of malaria as a cause of death.  Possible values
+    are "H" for high (~ 1:100 deaths), "L" for low (~ 1:1000), or "V" for very
+    low (~ 1:10000)
     :type malaria: string
-    :param write: a logical value indicating whether the output should be written
-     to the csv file indicated by the filename parameter.
+    :param write: a logical value indicating whether the output should be
+    written to the csv file indicated by the filename parameter.
     :type write: boolean
     :param directory: The directory to store the output from InterVA5.
-     It should either be an existing valid directory, or a new folder to be created.
-     If no path is given and the parameter for "write" is True, then
-     the function stops and an error message is produced.
+    It should either be an existing valid directory, or a new folder to be
+    created.  If no path is given and the parameter for "write" is True, then
+    the function stops and an error message is produced.
     :type directory: directory or string
     :param filename: the filename the user wishes to save the output.
-     No extension needed. The output is in .csv format by default.
+    No extension needed. The output is in .csv format by default.
     :type filename: string
-    :param output: the format of the output. Possible Values are 
-     "classic": the same deliminated output format as InterVA5, or
-     "extended": delimited output followed by full distribution of cause of death
-     probability
+    :param output: the format of the output. Possible Values are
+    "classic": the same deliminated output format as InterVA5, or
+    "extended": delimited output followed by full distribution of cause of
+    death probability
     :type output: string
-    :param append: a logical value indicating whether or not the new output should
-     be appended to the existing file.
+    :param append: a logical value indicating whether or not the new output
+    should be appended to the existing file.
     :type append: boolean
-    :param groupcode: a logical value indicating whether or not the group code will
-     be included in the output causes.
+    :param groupcode: a logical value indicating whether or not the group code
+    will be included in the output causes.
     :type groupcode: boolean
-    :param sci: an array containing the symptom-cause-information (aka Probbase)
-     that InterVA uses to assign a cause of death.
+    :param sci: an array containing the symptom-cause-information
+    (aka Probbase) that InterVA uses to assign a cause of death.
     :type sci: pandas data.frame or numpy ndarray
     :param return_checked_data: a logical value indicating if the checked data
-     (i.e., the data that have been modified by the consistency checks) should
-     be returned.
+    (i.e., the data that have been modified by the consistency checks) should
+    be returned.
     :type return_checked_data: boolean
-    :param others: not used
+    :param openva_app: instance of the openva_app (used for updating progress
+    bar, which requires the PyQt5 package to be installed).
     """
 
-    def __init__(self, va_input: Union[DataFrame, str], hiv: str, malaria: str, 
-                 write: bool = True, directory: str = None, 
-                 filename: str = "VA5_result", output: str = "classic", 
-                 append: bool = False, groupcode: bool = False, sci = None, 
-                 return_checked_data: bool = False, *others) -> dict:
+    def __init__(self, va_input: Union[DataFrame, str], hiv: str, malaria: str,
+                 write: bool = True, directory: str = None,
+                 filename: str = "VA5_result", output: str = "classic",
+                 append: bool = False, groupcode: bool = False,
+                 sci: DataFrame = None,
+                 return_checked_data: bool = False,
+                 openva_app=None) -> dict:
 
         self.va_input = va_input
         self.hiv = hiv
@@ -87,14 +90,15 @@ class InterVA5:
         self.groupcode = groupcode
         self.sci = sci
         self.return_checked_data = return_checked_data
+        self.openva_app = openva_app
 
-    def _check_data(self, va_input: Series, va_id: str, 
+    def _check_data(self, va_input: Series, va_id: str,
                     insilico_check: bool = False) -> dict:
         """Run data check."""
-        
+
         return datacheck5(va_input, va_id, insilico_check)
-        
-    def run(self) -> dict:
+
+    def run(self) -> None:
         """Assign causes of death.
         
         :return: ids of VA input,
@@ -102,27 +106,30 @@ class InterVA5:
          likelihood of malaria and HIV as causes of death, and
          cleaned data from data consistency checks.
         :rtype: dictionary with keys
-         ID (pandas.series), 
+         ID (pandas.series),
          VA5 (pandas data.frame),
          Malaria (str),
          HIV (str), and
          checked_data (pandas data.frame).
         """
-        
-        def va5(id: str, malprev: str, hivprev: str, pregstat: str, 
-                preglik: Union[str, int], cause1: str, lik1: Union[str, int], 
-                cause2: str, lik2: Union[str, int], cause3: str, 
-                lik3: Union[str, int], indet: int, comcat: str, 
-                comnum: Union[str, int], wholeprob: Series, *others) -> list:
+
+        if self.openva_app:
+            from PyQt5.QtWidgets import QApplication
+
+        def va5(id: str, malprev: str, hivprev: str, pregstat: str,
+                preglik: Union[str, int], cause1: str, lik1: Union[str, int],
+                cause2: str, lik2: Union[str, int], cause3: str,
+                lik3: Union[str, int], indet: int, comcat: str,
+                comnum: Union[str, int], wholeprob: Series) -> list:
             """ Returns an individual VA result. """
-            
-            return [id, str(malprev), str(hivprev), pregstat, preglik, 
-                    cause1, lik1, cause2, lik2, cause3, lik3, indet, 
+
+            return [id, str(malprev), str(hivprev), pregstat, preglik,
+                    cause1, lik1, cause2, lik2, cause3, lik3, indet,
                     str(comcat), comnum, wholeprob]
-                    
+
         def save_va5(x: list, filename: str, write: bool) -> None:
             """ Saves the VA5 result to csv, without propensities. """
-            
+
             if not write:
                 return()
             del x[14]
@@ -130,10 +137,10 @@ class InterVA5:
             with open(filename, 'a', newline="") as csvfile:
                 csv_writer = writer(csvfile)
                 csv_writer.writerow(x)
-        
+
         def save_va5_prob(x: list, filename: str, write: bool) -> None:
             """ Saves the VA5 result to csv, with propensities. """
-            
+
             if not write:
                 return()
             prob = x.pop(14)
@@ -145,30 +152,31 @@ class InterVA5:
                 csv_writer.writerow(x)
 
         if self.directory is None and self.write:
-            raise IOError("error: please provide a directory (required when write = True)")
+            raise IOError(
+                "error: please provide a directory " +
+                "(required when write = True)")
         if self.directory is None:
             self.directory = getcwd()
         if not path.isdir(self.directory):
             mkdir(self.directory)
-        globle_dir = getcwd()
-        if globle_dir != self.directory:
+        global_dir = getcwd()
+        if global_dir != self.directory:
             chdir(self.directory)
-        
+
         probbaseV5 = None
         if self.sci is None:
             probbase_df = get_probbase(version="19").copy()
             probbaseV5 = probbase_df.to_numpy()
         if self.sci is not None:
-            validSCI = True
-            if not isinstance(self.sci, DataFrame) and \
-                not isinstance(self.sci, ndarray):
-                validSCI = False
+            valid_sci = True
+            if not isinstance(self.sci, DataFrame) and not isinstance(self.sci, ndarray):
+                valid_sci = False
             if self.sci.shape[0] != 354 or self.sci.shape[1] != 87:
-                validSCI = False
-            if not validSCI:
-                raise IOError \
-                    ("Error: Invalid SCI (must be Pandas DataFrame or \
-                     Numpy ndarray with 354 rows and 87 columns).")
+                valid_sci = False
+            if not valid_sci:
+                raise IOError(
+                    "Error: Invalid SCI (must be Pandas DataFrame or " +
+                    "Numpy ndarray with 354 rows and 87 columns).")
             if isinstance(self.sci, DataFrame):
                 self.sci = self.sci.to_numpy()
             probbaseV5 = self.sci
@@ -195,11 +203,11 @@ class InterVA5:
         if isinstance(self.va_input, str) and self.va_input[-4:] == ".csv":
             self.va_input = read_csv(self.va_input)
         if "i183o" in self.va_input.columns:
-            self.va_input.rename(columns={'i183o': 'i183a'}, axis='columns', 
+            self.va_input.rename(columns={'i183o': 'i183a'}, axis='columns',
                                  inplace=True)
-            print("Due to the inconsistent names in the early version of " + 
+            print("Due to the inconsistent names in the early version of " +
                   "InterVA5, the indicator 'i183o' has been renamed as 'i183a'.")
-        
+
         va_data = self.va_input.copy()
         va_input_names = va_data.columns
         id_inputs = va_data.iloc[:, 0]
@@ -209,8 +217,8 @@ class InterVA5:
         N = va_data.shape[0]
         S = va_data.shape[1]
         if S != probbaseV5.shape[0]:
-            raise IOError \
-                ("error: invalid data input format. Number of values incorrect")
+            raise IOError(
+                "error: invalid data input format. Number of values incorrect")
         if va_input_names[S-1].lower() != "i459o":
             raise IOError("error: the last variable should be 'i459o'")
         va_data_csv = get_data("interva", "data/randomva5.csv")
@@ -225,7 +233,7 @@ class InterVA5:
                         InterVA5 standard: '{std_col}'")
                 count_changelabel = count_changelabel + 1
         if count_changelabel > 0:
-            logger.warning("{count_changelabel} column names changed in input.\n" + 
+            logger.warning("{count_changelabel} column names changed in input.\n" +
                     "If the change is undesirable, please change in the input " +
                     "to match standard InterVA5 input format.")
             va_input_names = valabels
@@ -270,12 +278,12 @@ class InterVA5:
         if self.malaria == "v":
             Sys_Prior[24] = 1e-05
             Sys_Prior[44] = 1e-05
-            
+
         ID_list = [nan for _ in range(N)]
         VA_result = [[] for _ in range(N)]
         if self.write and not self.append:
-            header = ["ID", "MALPREV", "HIVPREV", "PREGSTAT", "PREGLIK", 
-                            "CAUSE1", "LIK1", "CAUSE2", "LIK2", "CAUSE3", "LIK3", 
+            header = ["ID", "MALPREV", "HIVPREV", "PREGSTAT", "PREGLIK",
+                            "CAUSE1", "LIK1", "CAUSE2", "LIK2", "CAUSE3", "LIK3",
                             "INDET", "COMCAT", "COMNUM"]
             if self.output == "extended":
                 header = header + list(self.causetextV5.iloc[:, 0])
@@ -284,11 +292,11 @@ class InterVA5:
                 csv_writer.writerow(header)
         nd = max(1, round(N/100))
         np = max(1, round(N/10))
-        
-        if self.write:  
+
+        if self.write:
             logger.info("\n\n the following records are incomplete and " +
                 "excluded from further processing: \n\n")
-            
+
         first_pass = []
         second_pass = []
         errors = ""
@@ -315,43 +323,43 @@ class InterVA5:
             input_current = copy(va_data[i, :])
             input_current[:][input_current[:] == "0"] = 0
             input_current[:][input_current[:] == "1"] = 1
-            
+
             input_current[0] = 0
             if nansum(input_current[5:12]) < 1:
                 if self.write:
-                    errors = (errors + index_current + 
+                    errors = (errors + index_current +
                               " Error in age indicator: Not Specified")
                 continue
             if nansum(input_current[3:5]) < 1:
                 if self.write:
-                    errors = (errors + index_current + 
+                    errors = (errors + index_current +
                               " Error in sex indicator: Not Specified")
                 continue
             if nansum(input_current[20:328]) < 1:
                 if self.write:
-                    errors = (errors + index_current + 
+                    errors = (errors + index_current +
                               " Error in indicators: No symptoms specified")
                 continue
-            
+
             input_current = Series(input_current, index=va_input_names)
             tmp = datacheck5(va_input=input_current, va_id=index_current)
             if self.return_checked_data:
                 self.checked_data[i] = [id_inputs[i]] + list(tmp["output"][1:S])
-            
+
             input_current = copy(tmp["output"])
             first_pass.append(tmp["first_pass"])
             second_pass.append(tmp["second_pass"])
-            
+
             subst_vector = array([nan for _ in range(S)])
             subst_vector[probbaseV5[:, 5] == "N"] = 0
             subst_vector[probbaseV5[:, 5] == "Y"] = 1
-            
+
             new_input = array([0 for _ in range(S)])
             for y in range(1,S):
                 if not isna(input_current[y]):
                     if input_current[y] == subst_vector[y]:
                         new_input[y] = 1
-            
+
             input_current[input_current == 0] = 1
             input_current[0] = 0
             input_current[isna(input_current)] = 0
@@ -372,12 +380,12 @@ class InterVA5:
                     prob[3:64] = prob[3:64] / nansum(prob[3:64])
                 if nansum(prob[64:70]) > 0:
                     prob[64:70] = prob[64:70] / nansum(prob[64:70])
-            
+
             prob_names = self.causetextV5.iloc[:, 0].copy()
             prob_A = copy(prob[0:3])
             prob_B = copy(prob[3:64])
             prob_C = copy(prob[64:70])
-            
+
             # Determine Preg_State and Likelihood
             if nansum(prob_A) == 0 or reproductiveAge == 0:
                 preg_state = "n/a"
@@ -394,7 +402,7 @@ class InterVA5:
             if where(prob_A == nanmax(prob_A))[0][0] == 2 and prob_A[2] >= 0.1 and reproductiveAge == 1:
                 preg_state = "Pregnant at death"
                 lik_preg = round(prob_A[2]/nansum(prob_A) * 100)
-            
+
             # Determine the output of InterVA
             prob_temp = copy(prob_B)
             prob_temp_names = prob_names.iloc[3:64].copy()
@@ -412,16 +420,17 @@ class InterVA5:
                 prob_temp_names.drop(prob_temp_names.index
                                      [max1_loc], inplace=True)
                 top3.append(lik1)
-                
+
                 max2_loc = where(prob_temp == nanmax(prob_temp))[0][0]
                 lik2 = round(nanmax(prob_temp) * 100)
                 cause2 = prob_temp_names.iloc[max2_loc]
                 if nanmax(prob_temp) < 0.5 * nanmax(prob_B):
                     lik2 = cause2 = " "
                 prob_temp = delete(prob_temp, max2_loc)
-                prob_temp_names.drop(prob_temp_names.index[max2_loc], inplace=True)
+                prob_temp_names.drop(prob_temp_names.index[max2_loc],
+                                     inplace=True)
                 top3.append(lik2)
-                
+
                 max3_loc = where(prob_temp == nanmax(prob_temp))[0][0]
                 lik3 = round(nanmax(prob_temp) * 100)
                 cause3 = prob_temp_names.iloc[max3_loc]
@@ -430,7 +439,7 @@ class InterVA5:
                 top3.append(lik3)
                 top3 = array([int(x) if x != " " else 0 for x in top3])
                 indet = round(100 - nansum(top3))
-            
+
             # Determine the Circumstances of Mortality CATegory (COMCAT) 
             # and probability
             prob_C_names = prob_names[64:70]
@@ -444,61 +453,69 @@ class InterVA5:
             if nanmax(prob_C) >= 0.5:
                 comcat = prob_C_names[where(prob_C == nanmax(prob_C))[0][0]]
                 comnum = round(nanmax(prob_C) * 100)
-            
+
             ID_list[i] = index_current
-            combined_prob = Series(concatenate((prob_A, prob_B, prob_C)), index=prob_names)
-            VA_result[i] = va5(index_current, self.malaria, self.hiv, preg_state, 
-                               lik_preg, cause1, lik1, cause2, lik2, cause3, lik3, 
-                               indet, comcat, comnum, wholeprob=combined_prob)
+            combined_prob = Series(concatenate((prob_A, prob_B, prob_C)),
+                                   index=prob_names)
+            VA_result[i] = va5(index_current, self.malaria, self.hiv,
+                               preg_state, lik_preg, cause1, lik1, cause2,
+                               lik2, cause3, lik3, indet, comcat, comnum,
+                               wholeprob=combined_prob)
             if self.output == "classic":
-                save_va5(VA_result[i].copy(), filename=self.filename, write=self.write)
+                save_va5(VA_result[i].copy(),
+                         filename=self.filename,
+                         write=self.write)
             if self.output == "extended":
-                save_va5_prob(VA_result[i].copy(), filename=self.filename, 
+                save_va5_prob(VA_result[i].copy(),
+                              filename=self.filename,
                               write=self.write)
+            if self.openva_app:
+                progress = int(100 * k / N)
+                self.openva_app.interva_pbar.setValue(progress)
+                QApplication.processEvents()
         if self.write:
             logger.info("\n the following data discrepancies were identified and " +
-                 "handled: \n" + str(first_pass) + "\nSecond pass\n" + 
+                 "handled: \n" + str(first_pass) + "\nSecond pass\n" +
                  str(second_pass))
-        
-        chdir(globle_dir)
+
+        chdir(global_dir)
         if not self.return_checked_data:
             self.checked_data = "return_checked_data = False"
         else:
             self.checked_data = DataFrame(self.checked_data)
             self.checked_data.columns = va_input_names
-        
+
         ID_list = Series(ID_list, name="ID")
         nan_indices = where(ID_list.isna())[0]
         ID_list.drop(nan_indices, inplace=True)
-        
+
         VA_result = DataFrame(VA_result)
-        VA_result.columns = ["ID", "MALPREV", "HIVPREV", "PREGSTAT", "PREGLIK", 
-                            "CAUSE1", "LIK1", "CAUSE2", "LIK2", "CAUSE3", "LIK3", 
-                            "INDET", "COMCAT", "COMNUM", "WHOLEPROB"]
+        VA_result.columns = ["ID", "MALPREV", "HIVPREV", "PREGSTAT", "PREGLIK",
+                             "CAUSE1", "LIK1", "CAUSE2", "LIK2", "CAUSE3",
+                             "LIK3", "INDET", "COMCAT", "COMNUM", "WHOLEPROB"]
         VA_result.drop(nan_indices, axis=0, inplace=True)
-        
+
         self.out = {"ID": ID_list,
                     "VA5": VA_result,
                     "Malaria": self.malaria,
                     "HIV": self.hiv,
                     "checked_data": self.checked_data}
-        return self.out
 
     def get_hiv(self) -> str:
         """Get HIV parameter."""
-        
+
         print(f"HIV parameter is {self.hiv}")
         return self.hiv
 
     def get_malaria(self) -> str:
         """Get malaria parameter."""
-        
+
         print(f"Malaria parameter is {self.malaria}")
         return self.malaria
 
     def set_hiv(self, hiv_level: str) -> str:
         """Set HIV parameter."""
-        
+
         hiv_lvl = hiv_level.lower()
         if hiv_lvl in ["h", "l", "v"]:
             self.hiv = hiv_lvl
@@ -509,7 +526,7 @@ class InterVA5:
 
     def set_malaria(self, malaria_level: str) -> str:
         """Set malaria parameter."""
-        
+
         malaria_lvl = malaria_level.lower()
         if malaria_lvl in ["h", "l", "v"]:
             self.malaria = malaria_lvl
@@ -520,7 +537,7 @@ class InterVA5:
 
     def get_ids(self) -> Series:
         """Return pandas series of ID column in data."""
-        
+
         va_df = self.va_input
         if isinstance(va_df, str) and va_df[-4:] == ".csv":
             va_df = read_csv(va_df)
@@ -541,11 +558,11 @@ class InterVA5:
         :return: the top causes in CSMF with their values.
         :rtype: pandas.series
         """
-        
+
         va = self.out["VA5"]
         set_option("display.max_rows", None)
         set_option("display.max_columns", None)
-        
+
         # for future compatibility with non-standard input
         causenames = causeindex = []
         for i in range(va.shape[0]):
@@ -554,7 +571,7 @@ class InterVA5:
                 causeindex = [x for x in range(len(causenames))]
                 break
         include_probAC = False
-        
+
         if self.groupcode:
             temp_names = ["" for _ in range(len(causenames))]
             for i in range(len(causenames)):
@@ -564,7 +581,7 @@ class InterVA5:
                     cause_with_code = causenames[i]
                     temp_names[i] = cause_with_code.split(" ", 1)[1]
             causenames = Index(temp_names)
-        
+
         # fix for removing the first 3 preg related death in standard input
         if ("Not pregnant or recently delivered" in causenames[0] and
             "Pregnancy ended within 6 weeks of death" in causenames[1] and
@@ -579,7 +596,7 @@ class InterVA5:
             del causeindex[0:3]
             causenames = causenames.delete([0, 1, 2, 64, 65, 66, 67, 68, 69])
             include_probAC = True
-            
+
         causetextV5_horizontal = DataFrame(CAUSETEXTV5)
         self.causetextV5 = causetextV5_horizontal.transpose()
         if groupcode:
@@ -592,7 +609,7 @@ class InterVA5:
                     code = str(self.causetextV5.iloc[i, 1])
                     temp_names[i] = code + " " + cause
             causenames = Index(temp_names)
-        
+
         # Check if there is a valid va object
         if len(va) < 1:
             print("No va5 object found")
@@ -604,7 +621,7 @@ class InterVA5:
                 dist = [[0 for _ in range(len(va.iloc[i, 14]))]]
                 break
         undeter = 0
-        
+
         # Pick not simply the top # causes,
         # but the top # causes reported by InterVA5
         for i in range(len(va)):
@@ -627,27 +644,27 @@ class InterVA5:
                 cutoff_pt2 = cutoff_2.max(cutoff_1_halved)
                 cutoff = cutoff_pt1.min(cutoff_pt2)
                 adj_cutoff = cutoff - Decimal(1e-15)
-                
+
                 undeter = undeter + sum(this_dist[where(this_dist < adj_cutoff)[0]])
                 this_dist[where(this_dist < adj_cutoff)[0]] = 0
-                
+
                 temp_len = len(this_dist[where(this_dist > 0)[0]])
                 close_indices = []
                 for j in range(temp_len):
                     if abs(Decimal(this_dist[where(this_dist > 0)[0]][j]) - cutoff) < 4e-29:
                         close_indices.append(where(this_dist > 0)[0][j])
-                
+
                 close_indices.sort(reverse=True)
                 for k in close_indices:
                     undeter = undeter + this_dist[k]
                     this_dist[k] = 0
-            
+
                 if va.iloc[i, 14] is not None:
                     if i == 0:
                         dist = this_dist
                     else:
                         dist = dist + this_dist
-        
+
         dist = Series(dist)
         dist_cod = None
         # Normalize the probability for CODs
@@ -662,7 +679,7 @@ class InterVA5:
             dist_cod.index = causenames
         if (isna(dist_cod).sum() == len(dist_cod)).all():
             dist_cod[isna(dist_cod)] = 0
-            
+
         dist_cod_sorted = dist_cod.copy()
         dist_cod_sorted.sort_values(ascending=False, inplace=True)
         # show causes with top non-zero values
@@ -689,14 +706,14 @@ class InterVA5:
          No extension needed. The output is in .csv format by default.
         :type filename: string
         """
-        
+
         set_option("display.max_rows", None)
         set_option("display.max_columns", None)
         csmf = self.get_csmf(top=top, groupcode=groupcode)
         filename = filename + ".csv"
         csmf.to_csv(filename, header=False)
 
-    def get_indiv_prob(self, top: int = 0, 
+    def get_indiv_prob(self, top: int = 0,
                        include_propensities: bool = False) -> DataFrame:
         """Get individual causes of death distribution.
         
@@ -709,7 +726,7 @@ class InterVA5:
         :return: the individual causes of death distribution.
         :rtype: pandas data.frame
         """
-        
+
         VA5 = self.out["VA5"]
         num_indiv = VA5.shape[0]
         cod_list = [[] for _ in range(num_indiv)]
@@ -723,11 +740,11 @@ class InterVA5:
                 if include_propensities:
                     prob = "PROPENSITY" + str(i+1) + ""
                     column_names.append(prob)
-            
+
         for indiv in range(num_indiv):
             wholeprob = VA5.loc[indiv, "WHOLEPROB"]
             prob_B = wholeprob.iloc[3:64].copy()
-            
+
             if top == 0 or top is None:
                 cod_list[indiv] = prob_B
             if top > 0:
@@ -761,7 +778,7 @@ class InterVA5:
         cod_df.insert(loc=0, column='ID', value=self.out["ID"])
         return cod_df
 
-    def write_indiv_prob(self, top: int = 0, include_propensities: bool = False, 
+    def write_indiv_prob(self, top: int = 0, include_propensities: bool = False,
                          filename: str = "indiv_prob") -> None:
         """Write individual cause of death distribution to CSV file.
         
@@ -777,7 +794,7 @@ class InterVA5:
          format by default.
         :type filename: string
         """
-        
+
         set_option("display.max_rows", None)
         set_option("display.max_columns", None)
         indiv_prob = self.get_indiv_prob(top, include_propensities)
