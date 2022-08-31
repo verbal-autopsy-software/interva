@@ -55,7 +55,7 @@ To run the InterVA5 algorithm on the InterVA5 object:
 
 ```python
 >>> iv5out.run()
-Using Probbase version: probbase v18 20200403 
+Using Probbase version: probbase v19 20210720
 ..........10% completed
 ..........20% completed
 ..........30% completed
@@ -67,8 +67,18 @@ Using Probbase version: probbase v18 20200403
 ..........90% completed
 ..........100% completed
 100% completed
+>>> iv5out.get_csmf(top=8)
+HIV/AIDS related death               0.194408
+Undetermined                         0.136583
+Digestive neoplasms                  0.083285
+Other and unspecified infect dis     0.063096
+Renal failure                        0.061253
+Reproductive neoplasms MF            0.053655
+Other and unspecified cardiac dis    0.047557
+Stroke                               0.045583
+dtype: float64
 ```
-  
+
 To access the algorithm output:  
 
 ```python
