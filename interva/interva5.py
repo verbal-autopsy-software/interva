@@ -178,8 +178,14 @@ class InterVA5:
                     "Error: Invalid SCI (must be Pandas DataFrame or " +
                     "Numpy ndarray with 354 rows and 87 columns).")
             if isinstance(self.sci, DataFrame):
+                probbase_df = self.sci.copy()
                 self.sci = self.sci.to_numpy()
             probbaseV5 = self.sci
+
+        pb_for_datacheck = probbase_df.fillna(".")
+        pb_for_datacheck["qdesc"] = ""
+        pb_for_datacheck = pb_for_datacheck.to_numpy(dtype=str)
+
         self.probbaseV5Version = probbaseV5[0, 2]
         print(f"Using Probbase version: {self.probbaseV5Version}")
         causetextV5_horizontal = DataFrame(CAUSETEXTV5)
@@ -342,7 +348,8 @@ class InterVA5:
                 continue
 
             input_current = Series(input_current, index=va_input_names)
-            tmp = datacheck5(va_input=input_current, va_id=index_current)
+            tmp = datacheck5(va_input=input_current, va_id=index_current,
+                             probbase=pb_for_datacheck)
             if self.return_checked_data:
                 self.checked_data[i] = [id_inputs[i]] + list(tmp["output"][1:S])
 
