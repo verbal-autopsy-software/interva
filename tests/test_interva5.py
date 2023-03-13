@@ -1,7 +1,7 @@
 # -*- coding: utf-8 -*-
 
 import pytest
-from pandas import read_csv, DataFrame, Series, read_excel
+from pandas import read_csv, DataFrame, Series
 from pkgutil import get_data
 from io import BytesIO
 from os.path import isfile
@@ -92,9 +92,9 @@ def test_run_correct_VA5_output(example_va_data, example_va_ids):
     # va5_output = run_output["VA5"]
     iv5out.run()
     va5_output = iv5out.out["VA5"]
-    # VA_result.columns = ["ID", "MALPREV", "HIVPREV", "PREGSTAT", "PREGLIK", 
-    #                      "CAUSE1", "LIK1", "CAUSE2", "LIK2", "CAUSE3", "LIK3", 
-    #                      "INDET", "COMCAT", "COMNUM", "WHOLEPROB"]
+    # VA_result.columns = ["ID", "MALPREV", "HIVPREV", "PREGSTAT", "PREGLIK",
+    #                      "CAUSE1", "LIK1", "CAUSE2", "LIK2", "CAUSE3",
+    #                      "LIK3", "INDET", "COMCAT", "COMNUM", "WHOLEPROB"]
     assert isinstance(va5_output, DataFrame)
     assert (va5_output.loc[:, "ID"] == example_va_ids).all()
     assert (va5_output.loc[:, "MALPREV"] == "l").all()
@@ -247,7 +247,7 @@ def test_write_csmf(example_va_data):
     assert isfile('csmf_top_5.csv')
     rowcount = 0
     for _ in open("csmf_top_5.csv"):
-      rowcount = rowcount + 1
+        rowcount = rowcount + 1
     assert rowcount == 5
 
 
@@ -288,6 +288,6 @@ def test_write_indiv_prob_top_5(example_va_data):
     assert isfile('indiv_prob_top_5.csv')
     rowcount = 0
     for _ in open("indiv_prob_top_5.csv"):
-      rowcount = rowcount + 1
+        rowcount = rowcount + 1
     # account for column headers
     assert rowcount == len(iv5out.out["ID"]) + 1

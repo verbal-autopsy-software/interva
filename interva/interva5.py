@@ -7,7 +7,9 @@ interva.interva5
 This module contains the class for the InterVA5 algorithm.
 """
 from __future__ import annotations
-from typing import Union
+from typing import Union, TYPE_CHECKING
+if TYPE_CHECKING:
+    import PyQt5
 from pandas import (DataFrame, Index, Series, read_csv, read_excel, to_numeric,
                     isna, set_option)
 from numpy import (ndarray, nan, nansum, nanmax, argsort, array, delete, where,
@@ -77,7 +79,8 @@ class InterVA5:
                  append: bool = False, groupcode: bool = False,
                  sci: DataFrame = None,
                  return_checked_data: bool = False,
-                 openva_app: Union[None, PyQt5.QtWidgets.QWidget] = None) -> dict:
+                 openva_app: Union[None,
+                                   PyQt5.QtWidgets.QWidget] = None) -> dict:
 
         self.va_input = va_input
         self.hiv = hiv
@@ -141,7 +144,7 @@ class InterVA5:
 
     def run(self) -> None:
         """Assign causes of death.
-        
+
         :return: ids of VA input,
          VA results with cause assignments and likelihoods,
          likelihood of malaria and HIV as causes of death, and
@@ -175,7 +178,8 @@ class InterVA5:
             probbaseV5 = probbase_df.to_numpy()
         if self.sci is not None:
             valid_sci = True
-            if not isinstance(self.sci, DataFrame) and not isinstance(self.sci, ndarray):
+            if not isinstance(self.sci, DataFrame) and \
+                    not isinstance(self.sci, ndarray):
                 valid_sci = False
             if self.sci.shape[0] != 354 or self.sci.shape[1] != 87:
                 valid_sci = False
@@ -202,9 +206,11 @@ class InterVA5:
                 cause = str(self.causetextV5.iloc[i, 0])
                 code = str(self.causetextV5.iloc[i, 1])
                 self.causetextV5.iloc[i, 1] = code + " " + cause
-            self.causetextV5.drop(self.causetextV5.columns[0], axis=1, inplace=True)
+            self.causetextV5.drop(self.causetextV5.columns[0],
+                                  axis=1, inplace=True)
         else:
-            self.causetextV5.drop(self.causetextV5.columns[1], axis=1, inplace=True)
+            self.causetextV5.drop(self.causetextV5.columns[1],
+                                  axis=1, inplace=True)
         logger = None
         if self.write:
             logger = getLogger(__name__)
@@ -218,8 +224,9 @@ class InterVA5:
         if "i183o" in self.va_input.columns:
             self.va_input.rename(columns={"i183o": "i183a"}, axis="columns",
                                  inplace=True)
-            print("Due to the inconsistent names in the early version of "
-                  "InterVA5, the indicator 'i183o' has been renamed as 'i183a'.")
+            print(
+                "Due to the inconsistent names in the early version of "
+                "InterVA5, the indicator 'i183o' has been renamed as 'i183a'.")
 
         va_data = self.va_input.copy()
         va_input_names = va_data.columns
@@ -251,30 +258,31 @@ class InterVA5:
                 "If the change is undesirable, please change in the input "
                 "to match standard InterVA5 input format.")
             va_input_names = valabels
-        prob_ncol = probbaseV5.shape[1]
-        probbaseV5[:,17:prob_ncol][probbaseV5[:,17:prob_ncol] == "I"] = 1
-        probbaseV5[:,17:prob_ncol][probbaseV5[:,17:prob_ncol] == "A+"] = 0.8
-        probbaseV5[:,17:prob_ncol][probbaseV5[:,17:prob_ncol] == "A"] = 0.5
-        probbaseV5[:,17:prob_ncol][probbaseV5[:,17:prob_ncol] == "A-"] = 0.2
-        probbaseV5[:,17:prob_ncol][probbaseV5[:,17:prob_ncol] == "B+"] = 0.1
-        probbaseV5[:,17:prob_ncol][probbaseV5[:,17:prob_ncol] == "B"] = 0.05
-        probbaseV5[:,17:prob_ncol][probbaseV5[:,17:prob_ncol] == "B-"] = 0.02
-        probbaseV5[:,17:prob_ncol][probbaseV5[:,17:prob_ncol] == "B -"] = 0.02
-        probbaseV5[:,17:prob_ncol][probbaseV5[:,17:prob_ncol] == "C+"] = 0.01
-        probbaseV5[:,17:prob_ncol][probbaseV5[:,17:prob_ncol] == "C"] = 0.005
-        probbaseV5[:,17:prob_ncol][probbaseV5[:,17:prob_ncol] == "C-"] = 0.002
-        probbaseV5[:,17:prob_ncol][probbaseV5[:,17:prob_ncol] == "D+"] = 0.001
-        probbaseV5[:,17:prob_ncol][probbaseV5[:,17:prob_ncol] == "D"] = 5e-04
-        probbaseV5[:,17:prob_ncol][probbaseV5[:,17:prob_ncol] == "D-"] = 1e-04
-        probbaseV5[:,17:prob_ncol][probbaseV5[:,17:prob_ncol] == "E"] = 1e-05
-        probbaseV5[:,17:prob_ncol][probbaseV5[:,17:prob_ncol] == "N"] = 0
-        probbaseV5[:,17:prob_ncol][probbaseV5[:,17:prob_ncol] == ""] = 0
+        pb_ncol = probbaseV5.shape[1]
+        probbaseV5[:, 17:pb_ncol][probbaseV5[:, 17:pb_ncol] == "I"] = 1
+        probbaseV5[:, 17:pb_ncol][probbaseV5[:, 17:pb_ncol] == "A+"] = 0.8
+        probbaseV5[:, 17:pb_ncol][probbaseV5[:, 17:pb_ncol] == "A"] = 0.5
+        probbaseV5[:, 17:pb_ncol][probbaseV5[:, 17:pb_ncol] == "A-"] = 0.2
+        probbaseV5[:, 17:pb_ncol][probbaseV5[:, 17:pb_ncol] == "B+"] = 0.1
+        probbaseV5[:, 17:pb_ncol][probbaseV5[:, 17:pb_ncol] == "B"] = 0.05
+        probbaseV5[:, 17:pb_ncol][probbaseV5[:, 17:pb_ncol] == "B-"] = 0.02
+        probbaseV5[:, 17:pb_ncol][probbaseV5[:, 17:pb_ncol] == "B -"] = 0.02
+        probbaseV5[:, 17:pb_ncol][probbaseV5[:, 17:pb_ncol] == "C+"] = 0.01
+        probbaseV5[:, 17:pb_ncol][probbaseV5[:, 17:pb_ncol] == "C"] = 0.005
+        probbaseV5[:, 17:pb_ncol][probbaseV5[:, 17:pb_ncol] == "C-"] = 0.002
+        probbaseV5[:, 17:pb_ncol][probbaseV5[:, 17:pb_ncol] == "D+"] = 0.001
+        probbaseV5[:, 17:pb_ncol][probbaseV5[:, 17:pb_ncol] == "D"] = 5e-04
+        probbaseV5[:, 17:pb_ncol][probbaseV5[:, 17:pb_ncol] == "D-"] = 1e-04
+        probbaseV5[:, 17:pb_ncol][probbaseV5[:, 17:pb_ncol] == "E"] = 1e-05
+        probbaseV5[:, 17:pb_ncol][probbaseV5[:, 17:pb_ncol] == "N"] = 0
+        probbaseV5[:, 17:pb_ncol][probbaseV5[:, 17:pb_ncol] == ""] = 0
         probbaseV5[0, 0:17] = 0
         Sys_Prior = copy(to_numeric(probbaseV5[0, :]))
         D = len(Sys_Prior)
         self.hiv = self.hiv.lower()
         self.malaria = self.malaria.lower()
-        if self.hiv not in ["h", "l", "v"] or self.malaria not in ["h", "l", "v"]:
+        hlv_set = ["h", "l", "v"]
+        if self.hiv not in hlv_set or self.malaria not in hlv_set:
             raise IOError("error: the HIV and Malaria indicator "
                           "should be one of the three: 'h', 'l', 'v'")
         if self.hiv == "h":
@@ -409,13 +417,16 @@ class InterVA5:
             if nanmax(prob_A) < 0.1 and reproductiveAge == 1:
                 preg_state = "indeterminate"
                 lik_preg = " "
-            if where(prob_A == nanmax(prob_A))[0][0] == 0 and prob_A[0] >= 0.1 and reproductiveAge == 1:
+            if where(prob_A == nanmax(prob_A))[0][0] == 0 and \
+                    prob_A[0] >= 0.1 and reproductiveAge == 1:
                 preg_state = "Not pregnant or recently delivered"
                 lik_preg = round(prob_A[0]/nansum(prob_A) * 100)
-            if where(prob_A == nanmax(prob_A))[0][0] == 1 and prob_A[1] >= 0.1 and reproductiveAge == 1:
+            if where(prob_A == nanmax(prob_A))[0][0] == 1 and \
+                    prob_A[1] >= 0.1 and reproductiveAge == 1:
                 preg_state = "Pregnancy ended within 6 weeks of death"
                 lik_preg = round(prob_A[1]/nansum(prob_A) * 100)
-            if where(prob_A == nanmax(prob_A))[0][0] == 2 and prob_A[2] >= 0.1 and reproductiveAge == 1:
+            if where(prob_A == nanmax(prob_A))[0][0] == 2 and \
+                    prob_A[2] >= 0.1 and reproductiveAge == 1:
                 preg_state = "Pregnant at death"
                 lik_preg = round(prob_A[2]/nansum(prob_A) * 100)
 
@@ -456,7 +467,7 @@ class InterVA5:
                 top3 = array([int(x) if x != " " else 0 for x in top3])
                 indet = round(100 - nansum(top3))
 
-            # Determine the Circumstances of Mortality CATegory (COMCAT) 
+            # Determine the Circumstances of Mortality CATegory (COMCAT)
             # and probability
             prob_C_names = prob_names[64:70]
             comcat = ""
@@ -546,7 +557,7 @@ class InterVA5:
         if hiv_lvl in ["h", "l", "v"]:
             self.hiv = hiv_lvl
         else:
-            print(f"The provided HIV level \"{hiv_level}\" is invalid.")
+            print(f"The provided HIV level '{hiv_level}' is invalid.")
         return self.hiv
         print(f"HIV parameter is {self.hiv}")
 
@@ -557,7 +568,7 @@ class InterVA5:
         if malaria_lvl in ["h", "l", "v"]:
             self.malaria = malaria_lvl
         else:
-            print(f"The provided malaria level \"{malaria_level}\" is invalid.")
+            print(f"The provided malaria level '{malaria_level}' is invalid.")
         return self.malaria
         print(f"Malaria parameter is {self.malaria}")
 
@@ -575,7 +586,7 @@ class InterVA5:
 
     def get_csmf(self, top: int = 10, groupcode: bool = False) -> Series:
         """Return top causes in cause-specific mortality fraction (CSMF).
-        
+
         :param top: number of top causes in the CSMF to be determined.
         :type top: integer
         :param groupcode: a logical value indicating whether or not the
@@ -610,14 +621,14 @@ class InterVA5:
 
         # fix for removing the first 3 preg related death in standard input
         if ("Not pregnant or recently delivered" in causenames[0] and
-            "Pregnancy ended within 6 weeks of death" in causenames[1] and
-            "Pregnant at death" in causenames[2] and
-            "Culture" in causenames[64] and
-            "Emergency" in causenames[65] and
-            "Health" in causenames[66] and
-            "Inevitable" in causenames[67] and
-            "Knowledge" in causenames[68] and
-            "Resources" in causenames[69]):
+                "Pregnancy ended within 6 weeks of death" in causenames[1] and
+                "Pregnant at death" in causenames[2] and
+                "Culture" in causenames[64] and
+                "Emergency" in causenames[65] and
+                "Health" in causenames[66] and
+                "Inevitable" in causenames[67] and
+                "Knowledge" in causenames[68] and
+                "Resources" in causenames[69]):
             del causeindex[64:70]
             del causeindex[0:3]
             causenames = causenames.delete([0, 1, 2, 64, 65, 66, 67, 68, 69])
@@ -651,7 +662,7 @@ class InterVA5:
         # Pick not simply the top # causes,
         # but the top # causes reported by InterVA5
         for i in range(len(va)):
-            if va.iloc[i, 14] is None:  #wholeprob exists
+            if va.iloc[i, 14] is None:  # wholeprob exists
                 continue
             this_dist_copy = va.iloc[i, 14].copy()
             this_dist = this_dist_copy.to_numpy()
@@ -659,7 +670,10 @@ class InterVA5:
                 this_dist[0:3] = 0
                 this_dist[64:70] = 0
             if max(this_dist) < 0.4:
-                this_undeter = 1 if isclose(sum(this_dist), 0) else sum(this_dist)
+                if isclose(sum(this_dist), 0):
+                    this_undeter = 1
+                else:
+                    this_undeter = sum(this_dist)
                 undeter = undeter + this_undeter
             else:
                 cutoff_3 = Decimal(this_dist[argsort(-this_dist)][2])
@@ -671,13 +685,16 @@ class InterVA5:
                 cutoff = cutoff_pt1.min(cutoff_pt2)
                 adj_cutoff = cutoff - Decimal(1e-15)
 
-                undeter = undeter + sum(this_dist[where(this_dist < adj_cutoff)[0]])
+                undeter = undeter + sum(
+                    this_dist[where(this_dist < adj_cutoff)[0]])
                 this_dist[where(this_dist < adj_cutoff)[0]] = 0
 
                 temp_len = len(this_dist[where(this_dist > 0)[0]])
                 close_indices = []
                 for j in range(temp_len):
-                    if abs(Decimal(this_dist[where(this_dist > 0)[0]][j]) - cutoff) < 4e-29:
+                    val = Decimal(
+                        this_dist[where(this_dist > 0)[0]][j]) - cutoff
+                    if abs(val) < 4e-29:
                         close_indices.append(where(this_dist > 0)[0][j])
 
                 close_indices.sort(reverse=True)
@@ -715,7 +732,8 @@ class InterVA5:
         if show_top == top:
             a = dist_cod_sorted[show_top]
             b = dist_cod_sorted[show_top-1]
-            while show_top < len(dist_cod_sorted) and (abs(a-b) < (a+b) * 1e-5):
+            while show_top < len(dist_cod_sorted) and \
+                    (abs(a-b) < (a+b) * 1e-5):
                 show_top = show_top + 1
                 a = dist_cod_sorted[show_top]
                 b = dist_cod_sorted[show_top-1]
@@ -725,10 +743,10 @@ class InterVA5:
     def write_csmf(self, top: int = 10, groupcode: bool = False,
                    filename: str = "csmf") -> None:
         """Write cause-specific mortality fraction (CSMF) to CSV file.
-        
+
         :param top: number of top causes in the CSMF to be determined.
         :type top: integer
-        :param filename: the filename the user wishes to save the CSMF. 
+        :param filename: the filename the user wishes to save the CSMF.
          No extension needed. The output is in .csv format by default.
         :type filename: string
         """
@@ -742,7 +760,7 @@ class InterVA5:
     def get_indiv_prob(self, top: int = 0,
                        include_propensities: bool = False) -> DataFrame:
         """Get individual causes of death distribution.
-        
+
         :param top: number of top causes to be determined. If top is 0 or none,
          all propensities and no top causes will be be returned.
         :type top: integer
@@ -804,10 +822,11 @@ class InterVA5:
         cod_df.insert(loc=0, column='ID', value=self.out["ID"])
         return cod_df
 
-    def write_indiv_prob(self, top: int = 0, include_propensities: bool = False,
+    def write_indiv_prob(self, top: int = 0,
+                         include_propensities: bool = False,
                          filename: str = "indiv_prob") -> None:
         """Write individual cause of death distribution to CSV file.
-        
+
         :param top: number of top causes to be determined. If top is 0 or none,
          no causes and all propensities will be be displayed.
         :type top: integer
@@ -816,7 +835,7 @@ class InterVA5:
          this boolean is automatically set to true.
         :type include_propensities: boolean
         :param filename: the filename the user wishes to save the individual
-         cause distribution. No extension needed. The output is in .csv 
+         cause distribution. No extension needed. The output is in .csv
          format by default.
         :type filename: string
         """
