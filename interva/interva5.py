@@ -6,7 +6,8 @@ interva.interva5
 
 This module contains the class for the InterVA5 algorithm.
 """
-
+from __future__ import annotations
+from typing import Union
 from pandas import (DataFrame, Index, Series, read_csv, read_excel, to_numeric,
                     isna, set_option)
 from numpy import (ndarray, nan, nansum, nanmax, argsort, array, delete, where,
@@ -16,10 +17,9 @@ from math import isclose
 from os import path, chdir, getcwd, mkdir
 from logging import INFO, FileHandler, getLogger
 from csv import writer
-from time import time
+import datetime
 from pkgutil import get_data
 from io import BytesIO
-from typing import Union
 
 from interva.data.causetext import CAUSETEXTV5
 from vacheck.datacheck5 import datacheck5
@@ -29,7 +29,7 @@ class InterVA5:
     """InterVA5 algorithm for assigning cause of death.
 
     :param va_input: Verbal Autopsy data
-    :type va_input: pandas data.frame or path to CSV file
+    :type va_input: pandas DataFrame or path to CSV file
     :param hiv: likelihood of HIV as a cause of death.  Possible values are
     "H" for high (~ 1:100 deaths), "L" for low (~ 1:1000), or "V" for very
     low (~ 1:10000)
@@ -50,7 +50,7 @@ class InterVA5:
     No extension needed. The output is in .csv format by default.
     :type filename: string
     :param output: the format of the output. Possible Values are
-    "classic": the same deliminated output format as InterVA5, or
+    "classic": the same delimited output format as InterVA5, or
     "extended": delimited output followed by full distribution of cause of
     death probability
     :type output: string
@@ -62,7 +62,7 @@ class InterVA5:
     :type groupcode: boolean
     :param sci: an array containing the symptom-cause-information
     (aka Probbase) that InterVA uses to assign a cause of death.
-    :type sci: pandas data.frame or numpy ndarray
+    :type sci: pandas DataFrame or numpy ndarray
     :param return_checked_data: a logical value indicating if the checked data
     (i.e., the data that have been modified by the consistency checks) should
     be returned.
@@ -77,7 +77,7 @@ class InterVA5:
                  append: bool = False, groupcode: bool = False,
                  sci: DataFrame = None,
                  return_checked_data: bool = False,
-                 openva_app=None) -> dict:
+                 openva_app: Union[None, PyQt5.QtWidgets.QWidget] = None) -> dict:
 
         self.va_input = va_input
         self.hiv = hiv
@@ -91,12 +91,53 @@ class InterVA5:
         self.sci = sci
         self.return_checked_data = return_checked_data
         self.openva_app = openva_app
+        self.checked_data: Union[DataFrame, str] = ""
+        self.out = {}
 
-    def _check_data(self, va_input: Series, va_id: str,
+    @staticmethod
+    def _check_data(va_input: Series, va_id: str,
                     insilico_check: bool = False) -> dict:
         """Run data check."""
 
         return datacheck5(va_input, va_id, insilico_check)
+
+    @staticmethod
+    def _va5(id: str, malprev: str, hivprev: str, pregstat: str,
+             preglik: Union[str, int], cause1: str, lik1: Union[str, int],
+             cause2: str, lik2: Union[str, int], cause3: str,
+             lik3: Union[str, int], indet: int, comcat: str,
+             comnum: Union[str, int], wholeprob: Series) -> list:
+        """ Returns an individual VA result. """
+
+        return [id, str(malprev), str(hivprev), pregstat, preglik,
+                cause1, lik1, cause2, lik2, cause3, lik3, indet,
+                str(comcat), comnum, wholeprob]
+
+    @staticmethod
+    def save_va5(x: list, filename: str, write: bool) -> None:
+        """ Saves the VA5 result to csv, without propensities. """
+
+        if not write:
+            return ()
+        del x[14]
+        filename = filename + ".csv"
+        with open(filename, 'a', newline="") as csvfile:
+            csv_writer = writer(csvfile)
+            csv_writer.writerow(x)
+
+    @staticmethod
+    def save_va5_prob(x: list, filename: str, write: bool) -> None:
+        """ Saves the VA5 result to csv, with propensities. """
+
+        if not write:
+            return ()
+        prob = x.pop(14)
+        x = array(x)
+        filename = filename + ".csv"
+        x = concatenate((x, prob))
+        with open(filename, "a", newline="") as csvfile:
+            csv_writer = writer(csvfile)
+            csv_writer.writerow(x)
 
     def run(self) -> None:
         """Assign causes of death.
@@ -107,49 +148,14 @@ class InterVA5:
          cleaned data from data consistency checks.
         :rtype: dictionary with keys
          ID (pandas.series),
-         VA5 (pandas data.frame),
+         VA5 (pandas DataFrame),
          Malaria (str),
          HIV (str), and
-         checked_data (pandas data.frame).
+         checked_data (pandas DataFrame).
         """
 
         if self.openva_app:
             from PyQt5.QtWidgets import QApplication
-
-        def va5(id: str, malprev: str, hivprev: str, pregstat: str,
-                preglik: Union[str, int], cause1: str, lik1: Union[str, int],
-                cause2: str, lik2: Union[str, int], cause3: str,
-                lik3: Union[str, int], indet: int, comcat: str,
-                comnum: Union[str, int], wholeprob: Series) -> list:
-            """ Returns an individual VA result. """
-
-            return [id, str(malprev), str(hivprev), pregstat, preglik,
-                    cause1, lik1, cause2, lik2, cause3, lik3, indet,
-                    str(comcat), comnum, wholeprob]
-
-        def save_va5(x: list, filename: str, write: bool) -> None:
-            """ Saves the VA5 result to csv, without propensities. """
-
-            if not write:
-                return()
-            del x[14]
-            filename = filename + ".csv"
-            with open(filename, 'a', newline="") as csvfile:
-                csv_writer = writer(csvfile)
-                csv_writer.writerow(x)
-
-        def save_va5_prob(x: list, filename: str, write: bool) -> None:
-            """ Saves the VA5 result to csv, with propensities. """
-
-            if not write:
-                return()
-            prob = x.pop(14)
-            x = array(x)
-            filename = filename + ".csv"
-            x = concatenate((x, prob))
-            with open(filename, 'a', newline="") as csvfile:
-                csv_writer = writer(csvfile)
-                csv_writer.writerow(x)
 
         if self.directory is None and self.write:
             raise IOError(
@@ -175,7 +181,7 @@ class InterVA5:
                 valid_sci = False
             if not valid_sci:
                 raise IOError(
-                    "Error: Invalid SCI (must be Pandas DataFrame or " +
+                    "Error: Invalid SCI (must be Pandas DataFrame or "
                     "Numpy ndarray with 354 rows and 87 columns).")
             if isinstance(self.sci, DataFrame):
                 probbase_df = self.sci.copy()
@@ -201,17 +207,18 @@ class InterVA5:
             self.causetextV5.drop(self.causetextV5.columns[1], axis=1, inplace=True)
         logger = None
         if self.write:
-            logger = getLogger()
+            logger = getLogger(__name__)
             logger.setLevel(INFO)
-            file_handler = FileHandler("errorlogV5.txt")
+            file_handler = FileHandler("errorlogV5.txt", mode="w")
             logger.addHandler(file_handler)
-            logger.info("Error & warning log built for InterVA5 %f \n", time())
+            now = datetime.datetime.now().strftime("%Y-%m-%d %H:%M:%S")
+            logger.info(f"Error & warning log built for InterVA5 {now}\n")
         if isinstance(self.va_input, str) and self.va_input[-4:] == ".csv":
             self.va_input = read_csv(self.va_input)
         if "i183o" in self.va_input.columns:
-            self.va_input.rename(columns={'i183o': 'i183a'}, axis='columns',
+            self.va_input.rename(columns={"i183o": "i183a"}, axis="columns",
                                  inplace=True)
-            print("Due to the inconsistent names in the early version of " +
+            print("Due to the inconsistent names in the early version of "
                   "InterVA5, the indicator 'i183o' has been renamed as 'i183a'.")
 
         va_data = self.va_input.copy()
@@ -235,13 +242,14 @@ class InterVA5:
             input_col = va_input_names[i]
             std_col = valabels[i]
             if input_col.lower() != std_col.lower():
-                logger.warning("Input column '{input_col}' does not match \
-                        InterVA5 standard: '{std_col}'")
+                logger.warning(f"Input column '{input_col}' does not match "
+                               f"InterVA5 standard: '{std_col}'")
                 count_changelabel = count_changelabel + 1
         if count_changelabel > 0:
-            logger.warning("{count_changelabel} column names changed in input.\n" +
-                    "If the change is undesirable, please change in the input " +
-                    "to match standard InterVA5 input format.")
+            logger.warning(
+                f"{count_changelabel} column names changed in input.\n"
+                "If the change is undesirable, please change in the input "
+                "to match standard InterVA5 input format.")
             va_input_names = valabels
         prob_ncol = probbaseV5.shape[1]
         probbaseV5[:,17:prob_ncol][probbaseV5[:,17:prob_ncol] == "I"] = 1
@@ -266,8 +274,8 @@ class InterVA5:
         D = len(Sys_Prior)
         self.hiv = self.hiv.lower()
         self.malaria = self.malaria.lower()
-        if self.hiv not in ['h', 'l', 'v'] or self.malaria not in ['h', 'l', 'v']:
-            raise IOError("error: the HIV and Malaria indicator " +
+        if self.hiv not in ["h", "l", "v"] or self.malaria not in ["h", "l", "v"]:
+            raise IOError("error: the HIV and Malaria indicator "
                           "should be one of the three: 'h', 'l', 'v'")
         if self.hiv == "h":
             Sys_Prior[22] = 0.05
@@ -289,26 +297,25 @@ class InterVA5:
         VA_result = [[] for _ in range(N)]
         if self.write and not self.append:
             header = ["ID", "MALPREV", "HIVPREV", "PREGSTAT", "PREGLIK",
-                            "CAUSE1", "LIK1", "CAUSE2", "LIK2", "CAUSE3", "LIK3",
-                            "INDET", "COMCAT", "COMNUM"]
+                      "CAUSE1", "LIK1", "CAUSE2", "LIK2", "CAUSE3", "LIK3",
+                      "INDET", "COMCAT", "COMNUM"]
             if self.output == "extended":
                 header = header + list(self.causetextV5.iloc[:, 0])
-            with open(self.filename + ".csv", 'w', newline="") as write_obj:
+            with open(self.filename + ".csv", "w", newline="") as write_obj:
                 csv_writer = writer(write_obj)
                 csv_writer.writerow(header)
         nd = max(1, round(N/100))
         np = max(1, round(N/10))
 
         if self.write:
-            logger.info("\n\n the following records are incomplete and " +
-                "excluded from further processing: \n\n")
+            logger.info("\n\nthe following records are incomplete and "
+                        "excluded from further processing: \n\n")
 
         first_pass = []
         second_pass = []
         errors = ""
-        if self.return_checked_data:
-            self.checked_data = [[] for _ in range(N)]
-            # id_inputs declared & assigned above
+        list_checked_data = []
+
         for i in range(N):
             k = i + 1
             if k % nd == 0:
@@ -350,8 +357,10 @@ class InterVA5:
             input_current = Series(input_current, index=va_input_names)
             tmp = datacheck5(va_input=input_current, va_id=index_current,
                              probbase=pb_for_datacheck)
+
             if self.return_checked_data:
-                self.checked_data[i] = [id_inputs[i]] + list(tmp["output"][1:S])
+                list_checked_data.append(
+                    [id_inputs[i]] + list(tmp["output"][1:S]))
 
             input_current = copy(tmp["output"])
             first_pass.append(tmp["first_pass"])
@@ -362,7 +371,7 @@ class InterVA5:
             subst_vector[probbaseV5[:, 5] == "Y"] = 1
 
             new_input = array([0 for _ in range(S)])
-            for y in range(1,S):
+            for y in range(1, S):
                 if not isna(input_current[y]):
                     if input_current[y] == subst_vector[y]:
                         new_input[y] = 1
@@ -464,32 +473,42 @@ class InterVA5:
             ID_list[i] = index_current
             combined_prob = Series(concatenate((prob_A, prob_B, prob_C)),
                                    index=prob_names)
-            VA_result[i] = va5(index_current, self.malaria, self.hiv,
-                               preg_state, lik_preg, cause1, lik1, cause2,
-                               lik2, cause3, lik3, indet, comcat, comnum,
-                               wholeprob=combined_prob)
+            VA_result[i] = InterVA5._va5(index_current, self.malaria, self.hiv,
+                                         preg_state, lik_preg, cause1, lik1,
+                                         cause2, lik2, cause3, lik3, indet,
+                                         comcat, comnum,
+                                         wholeprob=combined_prob)
             if self.output == "classic":
-                save_va5(VA_result[i].copy(),
-                         filename=self.filename,
-                         write=self.write)
+                InterVA5._save_va5(VA_result[i].copy(),
+                                   filename=self.filename,
+                                   write=self.write)
             if self.output == "extended":
-                save_va5_prob(VA_result[i].copy(),
-                              filename=self.filename,
-                              write=self.write)
+                InterVA5._save_va5_prob(VA_result[i].copy(),
+                                        filename=self.filename,
+                                        write=self.write)
             if self.openva_app:
                 progress = int(100 * k / N)
                 self.openva_app.interva_pbar.setValue(progress)
                 QApplication.processEvents()
         if self.write:
-            logger.info("\n the following data discrepancies were identified and " +
-                 "handled: \n" + str(first_pass) + "\nSecond pass\n" +
-                 str(second_pass))
-
+            logger.info("the following data discrepancies were identified "
+                        "and handled:\n")
+            for j in range(len(first_pass)):
+                item = first_pass[j]
+                if item:
+                    for k in item:
+                        logger.info(k)
+            logger.info("\nSecond pass\n")
+            for j in range(len(second_pass)):
+                item = second_pass[j]
+                if item:
+                    for k in item:
+                        logger.info(k)
         chdir(global_dir)
         if not self.return_checked_data:
             self.checked_data = "return_checked_data = False"
         else:
-            self.checked_data = DataFrame(self.checked_data)
+            self.checked_data = DataFrame(list_checked_data)
             self.checked_data.columns = va_input_names
 
         ID_list = Series(ID_list, name="ID")
@@ -731,7 +750,7 @@ class InterVA5:
          propensities of top causes should be included. If top is 0 or none,
          this boolean is automatically set to true.
         :return: the individual causes of death distribution.
-        :rtype: pandas data.frame
+        :rtype: pandas DataFrame
         """
 
         VA5 = self.out["VA5"]
