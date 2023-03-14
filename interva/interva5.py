@@ -117,7 +117,7 @@ class InterVA5:
                 str(comcat), comnum, wholeprob]
 
     @staticmethod
-    def save_va5(x: list, filename: str, write: bool) -> None:
+    def _save_va5(x: list, filename: str, write: bool) -> None:
         """ Saves the VA5 result to csv, without propensities. """
 
         if not write:
@@ -129,7 +129,7 @@ class InterVA5:
             csv_writer.writerow(x)
 
     @staticmethod
-    def save_va5_prob(x: list, filename: str, write: bool) -> None:
+    def _save_va5_prob(x: list, filename: str, write: bool) -> None:
         """ Saves the VA5 result to csv, with propensities. """
 
         if not write:
