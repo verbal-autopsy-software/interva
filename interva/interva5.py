@@ -95,7 +95,7 @@ class InterVA5:
         self.return_checked_data = return_checked_data
         self.openva_app = openva_app
         self.checked_data: Union[DataFrame, str] = ""
-        self.out = {}
+        self.out: dict = {}
 
     @staticmethod
     def _check_data(va_input: Series, va_id: str,
@@ -143,18 +143,22 @@ class InterVA5:
             csv_writer.writerow(x)
 
     def run(self) -> None:
-        """Assign causes of death.
+        """Assign causes of death to valid VA records.
 
-        :return: ids of VA input,
-         VA results with cause assignments and likelihoods,
-         likelihood of malaria and HIV as causes of death, and
-         cleaned data from data consistency checks.
-        :rtype: dictionary with keys
-         ID (pandas.series),
-         VA5 (pandas DataFrame),
-         Malaria (str),
-         HIV (str), and
-         checked_data (pandas DataFrame).
+        Results are stored as a dictionary in the attribute out, which includes
+        the keys: (ID) pandas.Series of VA input IDs; (VA5) pandas.DataFrame
+        of VA results with cause assignments and likelihoods for valid VA
+        records (or None if there are no valid records); (Malaria) a str
+        indicating the likelihood of malaria as causes of death; (HIV) a str
+        indicating the likelihood of HIV as causes of death; and (checked_data)
+        a pandas.DataFrame containing the cleaned data from data consistency
+        checks.
+
+        If there are no valid VA records then the out["VA5"] value is None.  Note
+        that the data checks identify records as invalid (if the age or sex
+        indicators are missing, or if all the symptoms have missing values).
+
+        :return: None
         """
 
         if self.openva_app:
@@ -316,12 +320,11 @@ class InterVA5:
         np = max(1, round(N/10))
 
         if self.write:
-            logger.info("\n\nthe following records are incomplete and "
-                        "excluded from further processing: \n\n")
+            logger.info("\nThe following records are incomplete and "
+                        "excluded from further processing:\n")
 
         first_pass = []
         second_pass = []
-        errors = ""
         list_checked_data = []
 
         for i in range(N):
@@ -348,18 +351,15 @@ class InterVA5:
             input_current[0] = 0
             if nansum(input_current[5:12]) < 1:
                 if self.write:
-                    errors = (errors + index_current +
-                              " Error in age indicator: Not Specified")
+                    logger.info(index_current + " Error in age indicator: Not Specified")
                 continue
             if nansum(input_current[3:5]) < 1:
                 if self.write:
-                    errors = (errors + index_current +
-                              " Error in sex indicator: Not Specified")
+                    logger.info(index_current + " Error in sex indicator: Not Specified")
                 continue
             if nansum(input_current[20:328]) < 1:
                 if self.write:
-                    errors = (errors + index_current +
-                              " Error in indicators: No symptoms specified")
+                    logger.info(index_current + " Error in indicators: No symptoms specified")
                 continue
 
             input_current = Series(input_current, index=va_input_names)
@@ -502,7 +502,7 @@ class InterVA5:
                 self.openva_app.interva_pbar.setValue(progress)
                 QApplication.processEvents()
         if self.write:
-            logger.info("the following data discrepancies were identified "
+            logger.info("\nThe following data discrepancies were identified "
                         "and handled:\n")
             for j in range(len(first_pass)):
                 item = first_pass[j]
@@ -526,11 +526,14 @@ class InterVA5:
         nan_indices = where(ID_list.isna())[0]
         ID_list.drop(nan_indices, inplace=True)
 
-        VA_result = DataFrame(VA_result)
-        VA_result.columns = ["ID", "MALPREV", "HIVPREV", "PREGSTAT", "PREGLIK",
-                             "CAUSE1", "LIK1", "CAUSE2", "LIK2", "CAUSE3",
-                             "LIK3", "INDET", "COMCAT", "COMNUM", "WHOLEPROB"]
-        VA_result.drop(nan_indices, axis=0, inplace=True)
+        if len(ID_list) > 0:
+            VA_result = DataFrame(VA_result)
+            VA_result.columns = ["ID", "MALPREV", "HIVPREV", "PREGSTAT", "PREGLIK",
+                                 "CAUSE1", "LIK1", "CAUSE2", "LIK2", "CAUSE3",
+                                 "LIK3", "INDET", "COMCAT", "COMNUM", "WHOLEPROB"]
+            VA_result.drop(nan_indices, axis=0, inplace=True)
+        else:
+            VA_result = None
 
         self.out = {"ID": ID_list,
                     "VA5": VA_result,

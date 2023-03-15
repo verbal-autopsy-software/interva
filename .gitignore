@@ -1,0 +1,10 @@
+.idea
+.pytest_cache
+build
+interva.egg-info
+interva/pytest_cache
+interva/__pycache__
+interva/data/__pycache__
+interva/data/pytest_cache
+tests/pytest_cache
+tests/__pycache__
