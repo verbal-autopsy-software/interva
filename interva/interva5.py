@@ -164,9 +164,6 @@ class InterVA5:
         :return: None
         """
 
-        if self.openva_app:
-            from PyQt5.QtWidgets import QApplication
-
         if self.directory is None and self.write:
             raise IOError(
                 "error: please provide a directory " +
@@ -507,8 +504,7 @@ class InterVA5:
                                         write=self.write)
             if self.openva_app:
                 progress = int(100 * k / N)
-                self.openva_app.interva_pbar.setValue(progress)
-                QApplication.processEvents()
+                self.openva_app.emit(progress)
         if self.write:
             logger.info("\nThe following data discrepancies were identified "
                         "and handled:\n")
