@@ -24,6 +24,7 @@ from pkgutil import get_data
 from io import BytesIO
 
 from interva.data.causetext import CAUSETEXTV5
+from interva.utils import _get_dem_groups
 from vacheck.datacheck5 import datacheck5
 
 
@@ -96,8 +97,64 @@ class InterVA5:
         self.return_checked_data = return_checked_data
         self.openva_app = openva_app
         self.checked_data: Union[DataFrame, str] = ""
-        self.out: dict = {}
+        self.results: dict = {}
         self.gui_ctrl = gui_ctrl
+        self.dem_group: DataFrame = DataFrame({})
+
+    def __repr__(self):
+        sci_msg = "None\n"
+        if self.sci is not None:
+            sci_msg = "\n\n" + repr(self.sci) + "\n\n"
+        msg = ("interva.interva5.InterVA5(\n"
+               f"va_input = \n{self.va_input}\n"
+               f"hiv = {self.hiv}\n"
+               f"malaria = {self.malaria}\n"
+               f"write = {self.write}\n"
+               f"directory = {self.directory}\n"
+               f"filename = {self.filename}\n"
+               f"output = {self.output}\n"
+               f"append = {self.append}\n"
+               f"groupcode = {self.groupcode}\n"
+               f"sci = " + sci_msg +
+               f"return_checked_data = {self.return_checked_data}\n"
+               f"openva_app = {self.openva_app}\n"
+               f"gui_ctrl = {self.gui_ctrl}\n" + ")")
+        return msg
+
+    def __str__(self):
+        if len(self.results) == 0:
+            if isinstance(self.va_input, DataFrame):
+                data_msg = f"{self.va_input.shape[0]} VA records loaded\n"
+            elif isinstance(self.va_input, DataFrame):
+                data_msg = f"VA records from {self.va_input}\n"
+            else:
+                data_msg = "No VA records!\n"
+            msg = "InterVA5:\n" + data_msg
+            msg = msg + (f"HIV parameter is {self.hiv}\n"
+                         f"Malaria parameter is {self.malaria}\n"
+                         "No results (need to use run() method).")
+            return msg
+        else:
+            n_processed = self.results["VA5"].shape[0]
+            n_undetermined = sum(
+                self.results["VA5"]["CAUSE1"] == "Undetermined")
+            n_miss = n_processed - self.results["VA5"].shape[0]
+            n_male = sum(self.dem_group["sex"] == "male")
+            n_female = sum(self.dem_group["sex"] == "female")
+            n_adult = sum(self.dem_group["age"] == "adult")
+            n_child = sum(self.dem_group["age"] == "child")
+            n_neo = sum(self.dem_group["age"] == "neonate")
+            msg = ("InterVA5:\n"
+                   f"{self.va_input.shape[0]} VA records loaded\n"
+                   f"HIV parameter is {self.hiv}\n"
+                   f"Malaria parameter is {self.malaria}\n\n"
+                   f"{n_processed} VA records processed:\n"
+                   f"  {n_undetermined} causes are Undetermined\n"
+                   f"  {n_miss} records have missing info for age and/or sex\n"
+                   "Demographic Summary:\n"
+                   f"  Female: {n_female}, Male: {n_male}\n"
+                   f"  Adult: {n_adult}, Child: {n_child}, Neonate: {n_neo}")
+            return msg
 
     @staticmethod
     def _check_data(va_input: Series, va_id: str,
@@ -326,6 +383,7 @@ class InterVA5:
         first_pass = []
         second_pass = []
         list_checked_data = []
+        list_dem_group = []
 
         for i in range(N):
             if self.gui_ctrl["break"]:
@@ -370,6 +428,8 @@ class InterVA5:
             input_current = Series(input_current, index=va_input_names)
             tmp = datacheck5(va_input=input_current, va_id=index_current,
                              probbase=pb_for_datacheck)
+
+            list_dem_group.append(_get_dem_groups(tmp["output"]))
 
             if self.return_checked_data:
                 list_checked_data.append(
@@ -540,11 +600,14 @@ class InterVA5:
         else:
             VA_result = None
 
-        self.out = {"ID": ID_list,
-                    "VA5": VA_result,
-                    "Malaria": self.malaria,
-                    "HIV": self.hiv,
-                    "checked_data": self.checked_data}
+        dem_group = DataFrame(list_dem_group)
+        self.dem_group = dem_group.set_index("ID")
+
+        self.results = {"ID": ID_list,
+                        "VA5": VA_result,
+                        "Malaria": self.malaria,
+                        "HIV": self.hiv,
+                        "checked_data": self.checked_data}
 
     def get_hiv(self) -> str:
         """Get HIV parameter."""
@@ -588,23 +651,24 @@ class InterVA5:
             va_df = read_csv(va_df)
         return va_df.loc[:, "ID"]
 
-    def plot_csmf(self, top: int = 10, file: str = None) -> None:
-        """Plot cause-specific mortality fraction (CSMF)."""
-        pass
+    # def plot_csmf(self, top: int = 10, file: str = None) -> None:
+    #     """Plot cause-specific mortality fraction (CSMF)."""
+    #     pass
 
-    def get_csmf(self, top: int = 10, groupcode: bool = False) -> Series:
+    def get_csmf(self, top: int = 10,
+                 groupcode: bool = False) -> Union[Series, None]:
         """Return top causes in cause-specific mortality fraction (CSMF).
 
         :param top: number of top causes in the CSMF to be determined.
         :type top: integer
-        :param groupcode: a logical value indicating whether or not the
-         group code will be included in the cause names.
-        :type groupcode: boolean
+        :param groupcode: a logical value indicating if the group code will be
+        included in the cause names.
+        :type groupcode: bool
         :return: the top causes in CSMF with their values.
         :rtype: pandas.series
         """
 
-        va = self.out["VA5"]
+        va = self.results["VA5"]
         set_option("display.max_rows", None)
         set_option("display.max_columns", None)
 
@@ -658,7 +722,7 @@ class InterVA5:
         # Check if there is a valid va object
         if len(va) < 1:
             print("No va5 object found")
-            return()
+            return None
         # Initialize the population distribution
         dist = None
         for i in range(len(va)):
@@ -746,7 +810,7 @@ class InterVA5:
                 a = dist_cod_sorted[show_top]
                 b = dist_cod_sorted[show_top-1]
         top_csmf = dist_cod_sorted.head(show_top)
-        return(top_csmf)
+        return top_csmf
 
     def write_csmf(self, top: int = 10, groupcode: bool = False,
                    filename: str = "csmf") -> None:
@@ -754,6 +818,9 @@ class InterVA5:
 
         :param top: number of top causes in the CSMF to be determined.
         :type top: integer
+        :param groupcode: a logical value indicating if the group code will be
+        included in the cause names.
+        :type groupcode: bool
         :param filename: the filename the user wishes to save the CSMF.
          No extension needed. The output is in .csv format by default.
         :type filename: string
@@ -770,7 +837,7 @@ class InterVA5:
         """Get individual causes of death distribution.
 
         :param top: number of top causes to be determined. If top is 0 or none,
-         all propensities and no top causes will be be returned.
+         all propensities and no top causes will be returned.
         :type top: integer
         :param include_propensities: a logical value indicating whether the
          propensities of top causes should be included. If top is 0 or none,
@@ -779,7 +846,7 @@ class InterVA5:
         :rtype: pandas DataFrame
         """
 
-        VA5 = self.out["VA5"]
+        VA5 = self.results["VA5"]
         num_indiv = VA5.shape[0]
         cod_list = [[] for _ in range(num_indiv)]
         column_names = []
@@ -827,7 +894,7 @@ class InterVA5:
                                 cod_list[indiv].append(nanmax(prob_temp))
                         prob_temp = delete(prob_temp, max_loc)
         cod_df = DataFrame(cod_list, columns=column_names)
-        cod_df.insert(loc=0, column='ID', value=self.out["ID"])
+        cod_df.insert(loc=0, column='ID', value=self.results["ID"])
         return cod_df
 
     def write_indiv_prob(self, top: int = 0,
@@ -836,7 +903,7 @@ class InterVA5:
         """Write individual cause of death distribution to CSV file.
 
         :param top: number of top causes to be determined. If top is 0 or none,
-         no causes and all propensities will be be displayed.
+         no causes and all propensities will be displayed.
         :type top: integer
         :param include_propensities: a logical value indicating whether the
          propensities of top causes should be included. If top is 0 or none,

@@ -1,6 +1,7 @@
 # # -*- coding: utf-8 -*-
 
 from interva.interva5 import InterVA5, get_example_input
+from interva.utils import csmf
 from rpy2.robjects.packages import data, importr
 import rpy2.robjects as robjects
 from rpy2.robjects.conversion import get_conversion, localconverter
@@ -22,23 +23,34 @@ robjects.r('''
     prob[i,] <- r_va5[[i]]$wholeprob
   }
   csmf <- InterVA5::CSMF.interVA5(r_va5)
+  csmf5_no_rule <- InterVA5::CSMF5(r_va5, noplot=TRUE)
+  csmf5_no_rule2 <- InterVA5::CSMF5(r_va5, top.aggregate = 8, noplot=TRUE)
 
   r_prob_df <- as.data.frame(prob, colnames=r_prob_names)
   csmf_top15 <- as.data.frame(csmf[order(csmf, decreasing=TRUE)[1:15]])
+  df_csmf5_1 <- as.data.frame(csmf5_no_rule)
+  df_csmf5_2 <- as.data.frame(csmf5_no_rule2)
 ''')
 r_prob_df = robjects.globalenv["r_prob_df"]
 csmf_top15 = robjects.globalenv["csmf_top15"]
+df_csmf5_1 = robjects.globalenv["df_csmf5_1"]
+df_csmf5_2 = robjects.globalenv["df_csmf5_2"]
 
 with localconverter(robjects.default_converter + pandas2ri.converter):
     r_prob_check = get_conversion().rpy2py(r_prob_df)
     r_csmf_top15_check = get_conversion().rpy2py(csmf_top15)
+    r_csmf5_1 = get_conversion().rpy2py(df_csmf5_1)
+    r_csmf5_2 = get_conversion().rpy2py(df_csmf5_2)
 
 va_data = get_example_input()
 iv5out = InterVA5(va_data, hiv="h", malaria="l", directory=".",
                   groupcode=False)
 iv5out.run()
-py_prob_check = iv5out.out["VA5"].loc[:, "WHOLEPROB"]
+py_prob_check = iv5out.results["VA5"].loc[:, "WHOLEPROB"]
 py_csmf_top15_check = iv5out.get_csmf(top=15, groupcode=False)
+py_csmf5_1 = csmf(iv5out, interva_rule=False, top=15)
+py_csmf5_2 = csmf(iv5out, interva_rule=False,
+                  top=15, top_aggregate=8)
 
 
 def test_r_va5_comparison():
@@ -56,4 +68,30 @@ def test_r_csmf_top15_comparison():
     for i in range(len(r_csmf_top15_check)):
         a = round(float(py_csmf_top15[i]), 10)
         b = round(float(r_csmf_top15[i]), 10)
+        assert a == b
+
+
+def tests_utils_csmf_1():
+    r_csmf5_1_top15 = r_csmf5_1.sort_values(
+        by="csmf5_no_rule", ascending=False)[0:15]
+    py_csmf5_1_top15 = py_csmf5_1.sort_values(ascending=False)
+    assert (r_csmf5_1_top15.index == py_csmf5_1_top15.index).all()
+    py_csmf5_1_top15 = py_csmf5_1_top15.to_numpy()
+    r_csmf5_1_top15 = r_csmf5_1_top15.to_numpy()
+    for i in range(len(r_csmf5_1_top15)):
+        a = round(float(py_csmf5_1_top15[i]), 10)
+        b = round(float(r_csmf5_1_top15[i]), 10)
+        assert a == b
+
+
+def tests_utils_csmf_2():
+    r_csmf5_2_top15 = r_csmf5_2.sort_values(
+        by="csmf5_no_rule2", ascending=False)[0:15]
+    py_csmf5_2_top15 = py_csmf5_2.sort_values(ascending=False)
+    assert (r_csmf5_2_top15.index == py_csmf5_2_top15.index).all()
+    py_csmf5_2_top15 = py_csmf5_2_top15.to_numpy()
+    r_csmf5_2_top15 = r_csmf5_2_top15.to_numpy()
+    for i in range(len(r_csmf5_2_top15)):
+        a = round(float(py_csmf5_2_top15[i]), 4)
+        b = round(float(r_csmf5_2_top15[i]), 4)
         assert a == b

@@ -78,7 +78,7 @@ def test_run_correct_id_output(example_va_data: DataFrame,
     # run_output = iv5out.run()
     # id_output = run_output["ID"]
     iv5out.run()
-    id_output = iv5out.out["ID"]
+    id_output = iv5out.results["ID"]
     assert isinstance(id_output, Series)
     assert (id_output == example_va_ids).all()
 
@@ -91,7 +91,7 @@ def test_run_correct_VA5_output(example_va_data, example_va_ids):
     # run_output = iv5out.run()
     # va5_output = run_output["VA5"]
     iv5out.run()
-    va5_output = iv5out.out["VA5"]
+    va5_output = iv5out.results["VA5"]
     # VA_result.columns = ["ID", "MALPREV", "HIVPREV", "PREGSTAT", "PREGLIK",
     #                      "CAUSE1", "LIK1", "CAUSE2", "LIK2", "CAUSE3",
     #                      "LIK3", "INDET", "COMCAT", "COMNUM", "WHOLEPROB"]
@@ -124,7 +124,7 @@ def test_run_correct_malaria_output(example_va_data):
     # run_output = iv5out.run()
     # malaria_output = run_output["Malaria"]
     iv5out.run()
-    malaria_output = iv5out.out["Malaria"]
+    malaria_output = iv5out.results["Malaria"]
     assert isinstance(malaria_output, str)
     assert malaria_output == "l"
 
@@ -136,7 +136,7 @@ def test_run_correct_hiv_output(example_va_data):
     # run_output = iv5out.run()
     # hiv_output = run_output["HIV"]
     iv5out.run()
-    hiv_output = iv5out.out["HIV"]
+    hiv_output = iv5out.results["HIV"]
     assert isinstance(hiv_output, str)
     assert hiv_output == "h"
 
@@ -149,7 +149,7 @@ def test_run_correct_checked_data_output_if_true_return(example_va_data):
     # run_output = iv5out.run()
     # checked_data_output = run_output["checked_data"]
     iv5out.run()
-    checked_data_output = iv5out.out["checked_data"]
+    checked_data_output = iv5out.results["checked_data"]
     assert isinstance(checked_data_output, DataFrame)
     assert (checked_data_output.columns == va_data.columns).all()
 
@@ -161,7 +161,7 @@ def test_run_correct_checked_data_output_if_false_return(example_va_data):
                       return_checked_data=False)
     # run_output = iv5out.run()
     iv5out.run()
-    checked_data_output = iv5out.out["checked_data"]
+    checked_data_output = iv5out.results["checked_data"]
     assert isinstance(checked_data_output, str)
     assert checked_data_output == "return_checked_data = False"
 
@@ -223,8 +223,8 @@ def test_get_ids_correct_output(example_va_data):
 
 
 # plot function tests
-def test_plot_csmf():
-    pass
+# def test_plot_csmf():
+#     pass
 
 
 # get csmf function tests
@@ -259,10 +259,10 @@ def test_get_indiv_prob_top_none(example_va_data):
     iv5out.run()
     indiv_prob = iv5out.get_indiv_prob(top=0)
     assert isinstance(indiv_prob, DataFrame)
-    assert (indiv_prob.loc[:, "ID"] == iv5out.out["ID"]).all()
+    assert (indiv_prob.loc[:, "ID"] == iv5out.results["ID"]).all()
     # length of prob_B + 1 (ID)
     assert indiv_prob.shape[1] == len(
-        iv5out.out["VA5"].loc[0, "WHOLEPROB"].iloc[3:64]) + 1
+        iv5out.results["VA5"].loc[0, "WHOLEPROB"].iloc[3:64]) + 1
 
 
 def test_get_indiv_prob_top_5(example_va_data):
@@ -273,7 +273,7 @@ def test_get_indiv_prob_top_5(example_va_data):
     iv5out.run()
     indiv_prob = iv5out.get_indiv_prob(top=5, include_propensities=True)
     assert isinstance(indiv_prob, DataFrame)
-    assert (indiv_prob.loc[:, "ID"] == iv5out.out["ID"]).all()
+    assert (indiv_prob.loc[:, "ID"] == iv5out.results["ID"]).all()
     # 5 causes * 2 (for propensities) + 1 ID
     assert indiv_prob.shape[1] == 5*2 + 1
 
@@ -290,4 +290,4 @@ def test_write_indiv_prob_top_5(example_va_data):
     for _ in open("indiv_prob_top_5.csv"):
         rowcount = rowcount + 1
     # account for column headers
-    assert rowcount == len(iv5out.out["ID"]) + 1
+    assert rowcount == len(iv5out.results["ID"]) + 1
