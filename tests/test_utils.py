@@ -4,8 +4,9 @@ import pytest
 from pandas import concat, DataFrame, Series
 from numpy import nan
 from interva.interva5 import InterVA5, get_example_input
-from interva.utils import (csmf, _get_age_group, _get_age_group_all,
-                           _get_cod_with_dem, _get_dem_groups, _get_sex_group)
+from interva.utils import (csmf, get_indiv_cod, _get_age_group,
+                           _get_age_group_all, _get_cod_with_dem,
+                           _get_dem_groups, _get_sex_group)
 from interva.exceptions import ArgumentException
 
 va_data = get_example_input()
@@ -65,7 +66,7 @@ def test_get_age_group_exception():
         _get_age_group("a")
 
 
-def test_get_age_group_exception():
+def test_get_age_group_all_exception():
     with pytest.raises(ArgumentException):
         _get_age_group_all("a")
 
@@ -116,3 +117,16 @@ def test_get_cod_with_dem():
     out = _get_cod_with_dem(iv5out)
     assert "age" in out.columns
     assert "sex" in out.columns
+
+
+def test_get_indiv_cod():
+    out1 = get_indiv_cod(iv5out)
+    out2 = get_indiv_cod(iv5out, top=5, interva_rule=False)
+    out3 = get_indiv_cod(iv5out, top=5,
+                         include_propensities=True,
+                         interva_rule=False)
+    assert out1.equals(iv5out.get_indiv_prob())
+    assert (out2["CAUSE5"] != " ").all()
+    assert out2.shape[1] == 6
+    assert (out3["PROPENSITY5"] != " ").all()
+    assert out3.shape[1] == 11

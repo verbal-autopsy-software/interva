@@ -11,9 +11,9 @@ on:
 
 jobs:
   build:
-
     runs-on: ${{ matrix.os }}
     strategy:
+      max-parallel: 4
       fail-fast: false
       matrix:
         # os: [ubuntu-latest, macOS-latest, windows-latest]
@@ -40,7 +40,7 @@ jobs:
     - name: Install dependencies
       run: |
         python -m pip install --upgrade pip
-        python -m pip install flake8 pytest rpy2
+        python -m pip install flake8 pytest rpy2 tzlocal
         pip install -e .
     - name: Lint with flake8
       run: |

@@ -11,7 +11,7 @@ output from InterVA5 (i.e., the out attribute).
 from __future__ import annotations
 from typing import Union
 from pandas import DataFrame, Index, Series, isna
-from numpy import append, argsort, where, zeros
+from numpy import append, argsort, delete, nanmax, where, zeros
 from decimal import Decimal
 from math import isclose
 
@@ -443,3 +443,74 @@ def _get_cod_with_dem(iva5: interva.interva5.InterVA5) -> DataFrame:
     all_results = va5_results.merge(iva5.dem_group, on="ID")
     all_results = all_results.reset_index("ID")
     return all_results
+
+
+def get_indiv_cod(iva5: interva.interva5.InterVA5,
+                  top: int = 0,
+                  interva_rule: bool = True,
+                  include_propensities: bool = False) -> DataFrame:
+    """Get individual causes of death distribution.
+
+    :param iva5: instance of InterVA5 with results
+    :type iva5: interva.interva5.InterVA5
+    :param top: number of top causes to be determined. If top is 0 or None,
+    all propensities be returned (unordered).
+    :type top: integer or None
+    :param include_propensities: a logical value indicating whether the
+    propensities of top causes should be included. If top is 0 or None,
+    this boolean is automatically set to True.
+    :return: the individual cause of death distribution.
+    :rtype: pandas DataFrame
+    """
+
+    if interva_rule:
+        cod = iva5.get_indiv_prob(top=top,
+                                  include_propensities=include_propensities)
+        return cod
+    else:
+        VA5 = iva5.results["VA5"].copy()
+        num_indiv = VA5.shape[0]
+        cod_list = [[] for _ in range(num_indiv)]
+        column_names = []
+        if top == 0 or top is None:
+            column_names = VA5.loc[0, "WHOLEPROB"].iloc[3:64].index
+        else:
+            for i in range(top):
+                name = "CAUSE" + str(i+1)
+                column_names.append(name)
+                if include_propensities:
+                    prob = "PROPENSITY" + str(i+1) + ""
+                    column_names.append(prob)
+
+        for indiv in range(num_indiv):
+            wholeprob = VA5.loc[indiv, "WHOLEPROB"]
+            prob_B = wholeprob.iloc[3:64].copy()
+
+            if top == 0 or top is None:
+                cod_list[indiv] = prob_B
+            if top > 0:
+                prob_temp = prob_B.to_numpy()
+                prob_temp_names = prob_B.index
+                for cause_num in range(top):
+                    if cause_num == 0:
+                        max_loc = where(prob_temp == nanmax(prob_temp))[0][0]
+                        cause = cod_list[indiv] = [prob_temp_names[max_loc]]
+                        if include_propensities:
+                            if cause == " ":
+                                cod_list[indiv].append(" ")
+                            else:
+                                cod_list[indiv].append(nanmax(prob_temp))
+                                prob_temp = delete(prob_temp, max_loc)
+                    if cause_num > 0:
+                        max_loc = where(prob_temp == nanmax(prob_temp))[0][0]
+                        cause = prob_temp_names[max_loc]
+                        cod_list[indiv].append(cause)
+                        if include_propensities:
+                            if cause == " ":
+                                cod_list[indiv].append(" ")
+                            else:
+                                cod_list[indiv].append(nanmax(prob_temp))
+                        prob_temp = delete(prob_temp, max_loc)
+        cod_df = DataFrame(cod_list, columns=column_names)
+        cod_df.insert(loc=0, column="ID", value=iva5.results["ID"])
+        return cod_df

@@ -13,7 +13,7 @@ CAUSETEXTV5 = {
                   "code": "Pregnancy ended within 6 weeks of death"},
     "a_preg": {"cause": "Pregnant at death",
                "code": "Pregnant at death"},
-    "b_0101": {"cause": "Sepsis (non-obstetric)", 
+    "b_0101": {"cause": "Sepsis (non-obstetric)",
                "code": 1.01},
     "b_0102": {"cause": "Acute resp infect incl pneumonia",
                "code": 1.02},
