@@ -9,14 +9,15 @@ output from InterVA5 (i.e., the out attribute).
 """
 
 from __future__ import annotations
-from typing import Union
+from typing import Union, TYPE_CHECKING
 from pandas import DataFrame, Index, Series, isna
 from numpy import append, argsort, delete, nanmax, where, zeros
 from decimal import Decimal
 from math import isclose
 
 from interva.exceptions import ArgumentException
-import interva.interva5
+if TYPE_CHECKING:
+    import interva.interva5
 
 
 def _get_dem_groups(va_series: Series, detailed=False) -> dict:
