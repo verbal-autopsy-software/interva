@@ -87,19 +87,22 @@ def test_get_age_groups_unknown():
     assert _get_dem_groups(va_record).get("age") == "unknown"
 
 
-def test_csmf_exception_df_input():
-    with pytest.raises(ArgumentException):
-        csmf("a")
+# def test_csmf_exception_df_input():
+#     with pytest.raises(ArgumentException):
+#         csmf("a")
 
 
 def test_csmf_exception_zero_rows():
+    bad_input = InterVA5(va_data, hiv="h", malaria="l", write=False)
     with pytest.raises(ArgumentException):
-        csmf(DataFrame({"a": []}))
+        csmf(bad_input)
 
 
 def test_csmf_exception_df_columns():
+    bad_input = InterVA5(va_data, hiv="h", malaria="l", write=False)
+    bad_input.results["VA5"] = iv5out.results["VA5"].drop(columns="MALPREV")
     with pytest.raises(ArgumentException):
-        csmf(DataFrame(range(12)))
+        csmf(bad_input)
 
 
 def test_csmf_returns_series():

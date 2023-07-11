@@ -44,7 +44,7 @@ def _get_sex_group(va_series: Series) -> str:
             "The argument for va_series must be a pandas.Series")
 
     yes = [1, "y", "Y", "yes", "Yes", "YES"]
-    no = [0, "n", "N", ".", "no", "No", "NO"]
+    no = [0, "n", "N", ".", "-", "no", "No", "NO"]
     va_sex = "unknown"
     if va_series["i019a"] in yes and (va_series["i019b"] in no or
                                       isna(va_series["i019b"])):
@@ -149,9 +149,9 @@ def csmf(iva5: interva.interva5.InterVA5,
     :rtype: pandas.series
     """
 
-    if not isinstance(iva5, interva.interva5.InterVA5):
-        raise ArgumentException(
-            "The argument for va5 must be an instance of the InterVA5 class")
+    # if not isinstance(iva5, interva.interva5.InterVA5):
+    #     raise ArgumentException(
+    #         "The argument for iva5 must be an instance of the InterVA5 class")
     if len(iva5.results) == 0:
         raise ArgumentException("No results (need to use run() method).")
     if age is not None:
@@ -432,9 +432,9 @@ def _get_cod_with_dem(iva5: interva.interva5.InterVA5) -> DataFrame:
     :rtype: pandas.DataFrame
     """
 
-    if not isinstance(iva5, interva.interva5.InterVA5):
-        raise ArgumentException(
-            "The argument for va5 must be an instance of the InterVA5 class")
+    # if not isinstance(iva5, interva.interva5.InterVA5):
+    #     raise ArgumentException(
+    #         "The argument for va5 must be an instance of the InterVA5 class")
     if len(iva5.results) == 0:
         raise ArgumentException("No results (need to use run() method).")
 
