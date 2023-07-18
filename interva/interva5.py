@@ -135,7 +135,7 @@ class InterVA5:
                          "No results (need to use run() method).")
             return msg
         else:
-            n_processed = self.results["VA5"].shape[0]
+            n_processed = self.va_input.shape[0]
             n_undetermined = sum(
                 self.results["VA5"]["CAUSE1"] == " ")
             n_miss = n_processed - self.results["VA5"].shape[0]
