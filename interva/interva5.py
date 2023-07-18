@@ -137,7 +137,7 @@ class InterVA5:
         else:
             n_processed = self.results["VA5"].shape[0]
             n_undetermined = sum(
-                self.results["VA5"]["CAUSE1"] == "Undetermined")
+                self.results["VA5"]["CAUSE1"] == " ")
             n_miss = n_processed - self.results["VA5"].shape[0]
             n_male = sum(self.dem_group["sex"] == "male")
             n_female = sum(self.dem_group["sex"] == "female")

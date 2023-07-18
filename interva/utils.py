@@ -457,6 +457,8 @@ def get_indiv_cod(iva5: interva.interva5.InterVA5,
     :param top: number of top causes to be determined. If top is 0 or None,
     all propensities be returned (unordered).
     :type top: integer or None
+    :param interva_rule: Use the InterVA threshold for assigning undetermined.
+    :type: bool
     :param include_propensities: a logical value indicating whether the
     propensities of top causes should be included. If top is 0 or None,
     this boolean is automatically set to True.
