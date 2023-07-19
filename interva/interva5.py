@@ -413,16 +413,25 @@ class InterVA5:
                 if self.write:
                     logger.info(index_current +
                                 " Error in age indicator: Not Specified")
+                if self.openva_app:
+                    progress = int(100 * k / N)
+                    self.openva_app.emit(progress)
                 continue
             if nansum(input_current[3:5]) < 1:
                 if self.write:
                     logger.info(index_current +
                                 " Error in sex indicator: Not Specified")
+                if self.openva_app:
+                    progress = int(100 * k / N)
+                    self.openva_app.emit(progress)
                 continue
             if nansum(input_current[20:328]) < 1:
                 if self.write:
                     logger.info(index_current +
                                 " Error in indicators: No symptoms specified")
+                if self.openva_app:
+                    progress = int(100 * k / N)
+                    self.openva_app.emit(progress)
                 continue
 
             input_current = Series(input_current, index=va_input_names)
