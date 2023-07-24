@@ -684,8 +684,10 @@ class InterVA5:
         # for future compatibility with non-standard input
         causenames = causeindex = []
         for i in range(va.shape[0]):
-            if va.loc[i, "WHOLEPROB"] is not None:
-                causenames = va.loc[i, "WHOLEPROB"].index
+            # if va.loc[i, "WHOLEPROB"] is not None:
+            #     causenames = va.loc[i, "WHOLEPROB"].index
+            if va.iloc[i]["WHOLEPROB"] is not None:
+                causenames = va.iloc[i]["WHOLEPROB"].index
                 causeindex = [x for x in range(len(causenames))]
                 break
         include_probAC = False
@@ -870,7 +872,8 @@ class InterVA5:
                     column_names.append(prob)
 
         for indiv in range(num_indiv):
-            wholeprob = VA5.loc[indiv, "WHOLEPROB"]
+            # wholeprob = VA5.loc[indiv, "WHOLEPROB"]
+            wholeprob = VA5.iloc[indiv]["WHOLEPROB"]
             prob_B = wholeprob.iloc[3:64].copy()
 
             if top == 0 or top is None:
