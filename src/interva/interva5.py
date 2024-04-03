@@ -553,7 +553,7 @@ class InterVA5:
                 comcat = "Multiple"
                 comnum = " "
             if nanmax(prob_C) >= 0.5:
-                comcat = prob_C_names[where(prob_C == nanmax(prob_C))[0][0]]
+                comcat = prob_C_names.iloc[where(prob_C == nanmax(prob_C))[0][0]]
                 comnum = round(nanmax(prob_C) * 100)
 
             ID_list[i] = index_current
@@ -827,11 +827,11 @@ class InterVA5:
         dist_cod_sorted.sort_values(ascending=False, inplace=True)
         # show causes with top non-zero values
         show_top = 0
-        while dist_cod_sorted[show_top] > 0 and show_top < top:
+        while dist_cod_sorted.iloc[show_top] > 0 and show_top < top:
             show_top = show_top + 1
         if show_top == top:
-            a = dist_cod_sorted[show_top]
-            b = dist_cod_sorted[show_top-1]
+            a = dist_cod_sorted.iloc[show_top]
+            b = dist_cod_sorted.iloc[show_top-1]
             while show_top < len(dist_cod_sorted) and \
                     (abs(a-b) < (a+b) * 1e-5):
                 show_top = show_top + 1

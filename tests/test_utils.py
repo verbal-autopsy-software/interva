@@ -27,7 +27,7 @@ all_age_groups = dict(zip(age_indicators, age_labels))
 
 def make_age_test_data(age_group, yes, no):
     sex_groups = Series({"ID": "d1", "i019a": "y", "i019b": "n"})
-    age_groups = Series({f"i022{i}": no for i in age_letters})
+    age_groups = Series({f"i022{i}": no for i in age_letters}).astype(object)
     age_groups[age_group] = yes
     va_record = concat([sex_groups, age_groups])
     age_all, age = all_age_groups[age_group]

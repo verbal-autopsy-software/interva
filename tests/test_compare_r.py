@@ -57,7 +57,7 @@ def test_r_va5_comparison():
     for i in range(r_prob_check.shape[0]):
         for j in range(r_prob_check.shape[1]):
             a = round(r_prob_check.iloc[i, j], 10)
-            b = round(py_prob_check[i][j], 10)
+            b = round(py_prob_check.iloc[i].iloc[j], 10)
             assert a == b
 
 
@@ -67,7 +67,7 @@ def test_r_csmf_top15_comparison():
     r_csmf_top15 = r_csmf_top15_check.to_numpy()
     for i in range(len(r_csmf_top15_check)):
         a = round(float(py_csmf_top15[i]), 10)
-        b = round(float(r_csmf_top15[i]), 10)
+        b = round(float(r_csmf_top15[i][0]), 10)
         assert a == b
 
 
@@ -80,7 +80,7 @@ def tests_utils_csmf_1():
     r_csmf5_1_top15 = r_csmf5_1_top15.to_numpy()
     for i in range(len(r_csmf5_1_top15)):
         a = round(float(py_csmf5_1_top15[i]), 10)
-        b = round(float(r_csmf5_1_top15[i]), 10)
+        b = round(float(r_csmf5_1_top15[i][0]), 10)
         assert a == b
 
 
@@ -93,5 +93,5 @@ def tests_utils_csmf_2():
     r_csmf5_2_top15 = r_csmf5_2_top15.to_numpy()
     for i in range(len(r_csmf5_2_top15)):
         a = round(float(py_csmf5_2_top15[i]), 4)
-        b = round(float(r_csmf5_2_top15[i]), 4)
+        b = round(float(r_csmf5_2_top15[i][0]), 4)
         assert a == b

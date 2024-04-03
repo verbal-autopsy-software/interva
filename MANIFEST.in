@@ -1,5 +1,5 @@
 include README.md
 include LICENSE
-include interva/data/*.csv
-include interva/data/*.xls
-include interva/data/*.py
+include src/interva/data/*.csv
+include src/interva/data/*.xls
+include src/interva/data/*.py
