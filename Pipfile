@@ -10,5 +10,5 @@ rpy2 = "*"
 [packages]
 pandas = "*"
 numpy = "*"
-vacheck = "*"
+vacheck = ">=0.0.3"
 xlrd = "*"

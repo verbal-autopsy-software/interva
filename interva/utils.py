@@ -352,6 +352,7 @@ def _csmf_with_interva_rule(va5: DataFrame) -> Series:
     for i in va.index:
         if va.loc[i, "WHOLEPROB"] is not None:
             dist = zeros(len(va.loc[i, "WHOLEPROB"]))
+            # TODO: this has been changed (to fix bug) in interva5.py
             break
     undetermined = 0
 

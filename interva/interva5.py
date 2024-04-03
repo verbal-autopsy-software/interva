@@ -22,6 +22,7 @@ from csv import writer
 import datetime
 from pkgutil import get_data
 from io import BytesIO
+import warnings
 
 from interva.data.causetext import CAUSETEXTV5
 from interva.utils import _get_dem_groups
@@ -607,10 +608,16 @@ class InterVA5:
                                  "WHOLEPROB"]
             VA_result.drop(nan_indices, axis=0, inplace=True)
         else:
+            # TODO: add get_errors() function (similar to pyinsilicova)
+            warnings.warn(
+                "NO VALID VA RECORDS (datacheck procedure invalidated all "
+                "deaths)!  Check error log for more details."
+            )
             VA_result = None
 
-        dem_group = DataFrame(list_dem_group)
-        self.dem_group = dem_group.set_index("ID")
+        if len(list_dem_group) > 0:
+            dem_group = DataFrame(list_dem_group)
+            self.dem_group = dem_group.set_index("ID")
 
         self.results = {"ID": ID_list,
                         "VA5": VA_result,
@@ -636,10 +643,10 @@ class InterVA5:
         hiv_lvl = hiv_level.lower()
         if hiv_lvl in ["h", "l", "v"]:
             self.hiv = hiv_lvl
+            print(f"HIV parameter is {self.hiv}")
         else:
             print(f"The provided HIV level '{hiv_level}' is invalid.")
         return self.hiv
-        print(f"HIV parameter is {self.hiv}")
 
     def set_malaria(self, malaria_level: str) -> str:
         """Set malaria parameter."""
@@ -647,10 +654,10 @@ class InterVA5:
         malaria_lvl = malaria_level.lower()
         if malaria_lvl in ["h", "l", "v"]:
             self.malaria = malaria_lvl
+            print(f"Malaria parameter is {self.malaria}")
         else:
             print(f"The provided malaria level '{malaria_level}' is invalid.")
         return self.malaria
-        print(f"Malaria parameter is {self.malaria}")
 
     def get_ids(self) -> Series:
         """Return pandas series of ID column in data."""
@@ -677,6 +684,13 @@ class InterVA5:
         :rtype: pandas.series
         """
 
+        if len(self.results) == 0:
+            print("No results.  Use run() method to assign causes.")
+            return None
+        if self.results["VA5"] is None:
+            print("No results found.  Check error log.  It is likely that "
+                  "all records failed the data consistency checks.")
+            return None
         va = self.results["VA5"]
         set_option("display.max_rows", None)
         set_option("display.max_columns", None)
@@ -738,8 +752,10 @@ class InterVA5:
         dist = None
         for i in range(len(va)):
             if va.iloc[i, 14] is not None:
-                dist = [[0 for _ in range(len(va.iloc[i, 14]))]]
+                # dist = [[0 for _ in range(len(va.iloc[i, 14]))]]
+                dist = array([0] * len(va.iloc[i, 14]))
                 break
+        # what if dist is still None at this point? ex dataset 2?
         undeter = 0
 
         # Pick not simply the top # causes,
@@ -786,10 +802,11 @@ class InterVA5:
                     this_dist[k] = 0
 
                 if va.iloc[i, 14] is not None:
-                    if i == 0:
-                        dist = this_dist
-                    else:
-                        dist = dist + this_dist
+                    # if i == 0:
+                    #     dist = this_dist
+                    # else:
+                    #     dist = dist + this_dist
+                    dist = dist + this_dist
 
         dist = Series(dist)
         dist_cod = None
