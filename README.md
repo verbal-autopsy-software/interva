@@ -3,7 +3,8 @@
 [![image](https://img.shields.io/pypi/pyversions/interva)](https://pypi.org/project/interva/)
 [![pytest](https://github.com/verbal-autopsy-software/interva/actions/workflows/python-package.yml/badge.svg)](https://github.com/verbal-autopsy-software/interva/actions)
 
-Python implementation of the InterVA algorithm for assigning causes of death to verbal autopsy data
+Python implementation of the InterVA (version 5) algorithm for assigning causes of death to verbal autopsy data.  This package replicates the R
+version [InterVA5](https://github.com/verbal-autopsy-software/InterVA5).
 
 
 ## Importing package and installing dependencies
