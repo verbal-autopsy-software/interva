@@ -284,8 +284,7 @@ class InterVA5:
         if isinstance(self.va_input, str) and self.va_input[-4:] == ".csv":
             self.va_input = read_csv(self.va_input)
         if "i183o" in self.va_input.columns:
-            self.va_input.rename(columns={"i183o": "i183a"}, axis="columns",
-                                 inplace=True)
+            self.va_input.rename(columns={"i183o": "i183a"}, inplace=True)
             print(
                 "Due to the inconsistent names in the early version of "
                 "InterVA5, the indicator 'i183o' has been renamed as 'i183a'.")
