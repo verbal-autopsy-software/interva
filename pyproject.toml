@@ -30,7 +30,7 @@ classifiers=[
 dependencies = [
         "pandas",
         "numpy",
-	"vacheck",
+	"vacheck>=0.0.3",
 	"xlrd",
 ]
 
